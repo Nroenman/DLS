@@ -1,0 +1,121 @@
+{
+  "realm": "airport-system",
+  "displayName": "Airport System",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 86400,
+  "ssoSessionMaxLifespan": 86400,
+
+  "roles": {
+    "realm": [
+      {
+        "name": "Admin",
+        "description": "Full administrative access — manage flights, gates, and users",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "Staff",
+        "description": "Operational access — create and update flights and gates",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "Passenger",
+        "description": "Standard user — book/follow flights",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+
+  "defaultRoles": ["Passenger"],
+
+  "clients": [
+    {
+      "clientId": "airport-api",
+      "name": "Airport System API (confidential)",
+      "description": "Back-channel client used by the API to call Keycloak Admin REST (user creation, role assignment). Never exposed to the browser.",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "airport-api-secret",
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "86400"
+      }
+    },
+    {
+      "clientId": "airport-frontend",
+      "name": "Airport System Frontend (public)",
+      "description": "Public client used by the SPA / GraphQL playground for user-facing login. Supports ROPC (dev) and Authorization Code + PKCE (production).",
+      "enabled": true,
+      "publicClient": true,
+      "serviceAccountsEnabled": false,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:5000/*",
+        "http://localhost:3000/*",
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "access.token.lifespan": "86400",
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "admin@airport.local",
+      "email": "admin@airport.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Airport",
+      "lastName": "Admin",
+      "credentials": [
+        { "type": "password", "value": "Admin1234!", "temporary": false }
+      ],
+      "realmRoles": ["Admin", "Passenger"]
+    },
+    {
+      "username": "staff@airport.local",
+      "email": "staff@airport.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Airport",
+      "lastName": "Staff",
+      "credentials": [
+        { "type": "password", "value": "Staff1234!", "temporary": false }
+      ],
+      "realmRoles": ["Staff", "Passenger"]
+    }
+  ]
+}

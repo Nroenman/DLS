@@ -1,0 +1,7 @@
+/home/grizzly/Documents/projects/AirportSystem/src/AirportSystem.Flight/obj/Debug/net8.0/AirportSystem.Flight.csproj.AssemblyReference.cache
+/home/grizzly/Documents/projects/AirportSystem/src/AirportSystem.Flight/obj/Debug/net8.0/rpswa.dswa.cache.json
+/home/grizzly/Documents/projects/AirportSystem/src/AirportSystem.Flight/obj/Debug/net8.0/AirportSystem.Flight.GeneratedMSBuildEditorConfig.editorconfig
+/home/grizzly/Documents/projects/AirportSystem/src/AirportSystem.Flight/obj/Debug/net8.0/AirportSystem.Flight.AssemblyInfoInputs.cache
+/home/grizzly/Documents/projects/AirportSystem/src/AirportSystem.Flight/obj/Debug/net8.0/AirportSystem.Flight.AssemblyInfo.cs
+/home/grizzly/Documents/projects/AirportSystem/src/AirportSystem.Flight/obj/Debug/net8.0/AirportSystem.Flight.csproj.CoreCompileInputs.cache
+/home/grizzly/Documents/projects/AirportSystem/src/AirportSystem.Flight/obj/Debug/net8.0/AirportSystem.Flight.MvcApplicationPartsAssemblyInfo.cache

@@ -1,0 +1,95 @@
+#TODO: PLACEHOLDER DC DURING DEVELOPMENT OF FLIGHT SERVICE
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: airport_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: airport_system
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: airport_keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: dev-mem          # in-memory for dev; swap for postgres in prod
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/airport-realm.json:/opt/keycloak/data/import/airport-realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /realms/master HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && timeout 3 grep -qm1 '200 OK' <&3"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  flight:
+    build:
+      context: .
+      dockerfile: src/AirportSystem.Flights/Dockerfile
+    container_name: airport_flight
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=airport_system;Username=postgres;Password=postgres"
+      Keycloak__BaseUrl: "http://keycloak:8080"
+      Keycloak__Realm: "airport-system"
+      Keycloak__ClientId: "airport-api"
+      Keycloak__ClientSecret: "airport-api-secret"
+      Keycloak__FrontendClientId: "airport-frontend"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  keycloak-init:
+    image: alpine/curl:latest
+    container_name: airport_keycloak_init
+    restart: "no"
+    volumes:
+      - ./keycloak/assign-service-account-roles.sh:/init.sh:ro
+    entrypoint: ["sh", "/init.sh"]
+    environment:
+      KC_URL: "http://keycloak:8080"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  # Single public entry point. Validates Keycloak JWTs and routes to services.
+  # To add a new service, register it under ReverseProxy.Routes/Clusters below
+  # or in the gateway's appsettings.json.
+  gateway:
+    build:
+      context: .
+      dockerfile: src/AirportSystem.Gateway/Dockerfile
+    container_name: airport_gateway
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Keycloak__BaseUrl: "http://keycloak:8080"
+      Keycloak__Realm: "airport-system"
+    depends_on:
+      - flight
+      - keycloak
+
+volumes:
+  postgres_data:
