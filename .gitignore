@@ -3,4 +3,5 @@
 bin/
 obj/
 .env
+BookingDbContextFactory.cs
 node_modules/
