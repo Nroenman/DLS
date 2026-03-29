@@ -9,8 +9,10 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<BookingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddScoped<IBookingReadRepository, BookingReadRepository>();
 builder.Services.AddScoped<IBookingWriteRepository, BookingWriteRepository>();
+builder.Services.AddScoped<IPricingRepository, PricingRepository>();
 
 var app = builder.Build();
 

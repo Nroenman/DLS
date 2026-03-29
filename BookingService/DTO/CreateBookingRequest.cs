@@ -8,5 +8,6 @@ public class CreateBookingRequest
     public string SeatClass {get; set;}
     public string ContactEmail {get; set;}
     public string ContactPhone {get; set;}
+    public decimal TicketPrice {get; set;}
     public List<CreatePassengerRequest> Passengers {get; set;}
 }
