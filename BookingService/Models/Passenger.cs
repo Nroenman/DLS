@@ -9,7 +9,7 @@ public class Passenger
     public DateTime DateOfBirth { get; set; }
     public string PassportNumber { get; set; }
     public string Nationality { get; set; }
-    public string SeatNumber { get; set; }
+    public string? SeatNumber { get; set; }
     public bool IsLeadPassenger { get; set; }
     public bool HasExtraBaggage { get; set; }
 }

@@ -1,6 +1,7 @@
 ﻿using BookingService.DTO;
 using BookingService.Models;
 using BookingService.Repositories;
+using BookingService.Validators;
 
 namespace BookingService.Services;
 
@@ -22,6 +23,8 @@ public class BookingService : IBookingService
 
     public async Task<BookingResponse> CreateBookingAsync(CreateBookingRequest request, string userId)
     {
+        BookingValidator.ValidateCreateBooking(request);
+        
         var booking = new Booking
         {
             Id = Guid.NewGuid(),
@@ -30,7 +33,7 @@ public class BookingService : IBookingService
             ReturnFlightId = request.ReturnFlightId,
             IsOneWay = request.IsOneWay,
             SeatClass = request.SeatClass,
-            Status = "Pending",
+            Status = BookingStatus.Pending,
             ContactEmail = request.ContactEmail,
             ContactPhone = request.ContactPhone,
             CreatedAt = DateTime.UtcNow,
@@ -97,7 +100,7 @@ public class BookingService : IBookingService
         return response;
     }
 
-    public async Task<BookingResponse?> GetBookingAsync(Guid id)
+    public async Task<BookingResponse?> GetBookingByIdAsync(Guid id)
     {
         var booking = await _bookingReadRepository.GetByIdAsync(id);
         if (booking == null)
@@ -127,8 +130,10 @@ public class BookingService : IBookingService
 
     public async Task<List<BookingResponse>> GetBookingsByUserIdAsync(string userId)
     {
+        BookingValidator.ValidateGetBookingsByUserId(userId);
+        
         var booking = await  _bookingReadRepository.GetByUserIdAsync(userId);
-
+        
         var responses = booking.Select(b => new BookingResponse()
         {
             BookingId = b.Id,
@@ -151,8 +156,9 @@ public class BookingService : IBookingService
         return responses;
     }
 
-    public async Task UpdateBookingStatusAsync(Guid id, string status)
+    public async Task UpdateBookingStatusAsync(Guid id, BookingStatus status)
     {
+        BookingValidator.ValidateUpdateBookingStatus(status);
         await _bookingWriteRepository.UpdateStatusAsync(id, status);
     }
 }

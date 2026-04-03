@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using BookingService.Data;
 using BookingService.Repositories;
+using BookingService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,9 @@ builder.Services.AddDbContext<BookingDbContext>(options =>
 builder.Services.AddScoped<IBookingReadRepository, BookingReadRepository>();
 builder.Services.AddScoped<IBookingWriteRepository, BookingWriteRepository>();
 builder.Services.AddScoped<IPricingRepository, PricingRepository>();
+builder.Services.AddScoped<IBookingService, BookingService.Services.BookingService>();
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var app = builder.Build();
 
