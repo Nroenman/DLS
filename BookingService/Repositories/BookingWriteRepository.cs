@@ -18,7 +18,7 @@ public class BookingWriteRepository : IBookingWriteRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateStatusAsync(Guid id, string status)
+    public async Task UpdateStatusAsync(Guid id, BookingStatus status)
     {
         var booking = await _context.Bookings.FindAsync(id);
         if (booking != null)
