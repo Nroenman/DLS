@@ -1,0 +1,29 @@
+﻿version: "3.9"
+
+services:
+  baggage-api:
+    build: .
+    container_name: baggage-api
+    ports:
+      - "5000:8080"
+    depends_on:
+      - postgres
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=baggage_db;Username=postgres;Password=postgres
+
+  postgres:
+    image: postgres:15
+    container_name: baggage-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: baggage_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
