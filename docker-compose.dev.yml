@@ -1,18 +1,6 @@
-#TODO: PLACEHOLDER DC DURING DEVELOPMENT OF FLIGHT SERVICE
-
 services:
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: airport_rabbitmq
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+  # ── Infrastructure ────────────────────────────────────────────────────────────
 
   postgres:
     image: postgres:16-alpine
@@ -32,6 +20,19 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: airport_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   keycloak:
     image: quay.io/keycloak/keycloak:23.0
     container_name: airport_keycloak
@@ -40,7 +41,7 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: dev-mem          # in-memory for dev; swap for postgres in prod
+      KC_DB: dev-mem
     ports:
       - "8080:8080"
     volumes:
@@ -52,9 +53,24 @@ services:
       retries: 10
       start_period: 30s
 
+  keycloak-init:
+    image: alpine/curl:latest
+    container_name: airport_keycloak_init
+    restart: "no"
+    volumes:
+      - ./keycloak/assign-service-account-roles.sh:/init.sh:ro
+    entrypoint: ["sh", "/init.sh"]
+    environment:
+      KC_URL: "http://keycloak:8080"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  # ── Services ──────────────────────────────────────────────────────────────────
+
   flight:
     build:
-      context: .
+      context: ./flight
       dockerfile: src/AirportSystem.Flights/Dockerfile
     container_name: airport_flight
     restart: unless-stopped
@@ -78,32 +94,46 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  keycloak-init:
-    image: alpine/curl:latest
-    container_name: airport_keycloak_init
-    restart: "no"
-    volumes:
-      - ./keycloak/assign-service-account-roles.sh:/init.sh:ro
-    entrypoint: ["sh", "/init.sh"]
+  booking:
+    build:
+      context: ./BookingService
+      dockerfile: Dockerfile
+    container_name: airport_booking
+    restart: unless-stopped
     environment:
-      KC_URL: "http://keycloak:8080"
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=airport_system;Username=postgres;Password=postgres"
     depends_on:
-      keycloak:
+      postgres:
         condition: service_healthy
 
-  # Single public entry point. Validates Keycloak JWTs and routes to services.
-  # To add a new service, register it under ReverseProxy.Routes/Clusters below
-  # or in the gateway's appsettings.json.
+  notification:
+    build:
+      context: ./NotificationService
+      dockerfile: Dockerfile
+    container_name: airport_notification
+    restart: unless-stopped
+    environment:
+      RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Port: "5672"
+      RabbitMQ__Username: "guest"
+      RabbitMQ__Password: "guest"
+      Mail__FromEmail: "noreply@airport.dk"
+      Mail__FromName: "Airport Notification Service"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
   gateway:
     build:
-      context: .
+      context: ./flight
       dockerfile: src/AirportSystem.Gateway/Dockerfile
     container_name: airport_gateway
     restart: unless-stopped
     ports:
       - "5000:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       Keycloak__BaseUrl: "http://keycloak:8080"
       Keycloak__Realm: "airport-system"
     depends_on:
