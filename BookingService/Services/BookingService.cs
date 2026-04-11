@@ -10,20 +10,27 @@ public class BookingService : IBookingService
     private readonly IBookingReadRepository _bookingReadRepository;
     private readonly IBookingWriteRepository _bookingWriteRepository;
     private readonly IPricingRepository _pricingRepository;
+    private readonly IBookingValidator _bookingValidator;
     
     public BookingService(
-        IBookingReadRepository bookingReadRepository, 
-        IBookingWriteRepository bookingWriteRepository,  
-        IPricingRepository pricingRepository)
+        IBookingReadRepository bookingReadRepository,
+        IBookingWriteRepository bookingWriteRepository,
+        IPricingRepository pricingRepository,
+        IBookingValidator bookingValidator)
         {
         _bookingReadRepository = bookingReadRepository;
         _bookingWriteRepository = bookingWriteRepository;
         _pricingRepository = pricingRepository;
+        _bookingValidator = bookingValidator;
         }
 
     public async Task<BookingResponse> CreateBookingAsync(CreateBookingRequest request, string userId)
     {
-        BookingValidator.ValidateCreateBooking(request);
+        _bookingValidator.ValidatePassengerCount(request.Passengers);
+        _bookingValidator.ValidateLeadPassenger(request.Passengers);
+        _bookingValidator.ValidatePassengerDetails(request.Passengers);
+        _bookingValidator.ValidateFlightInfo(request);
+        _bookingValidator.ValidateBookingDetails(request);
         
         var booking = new Booking
         {
@@ -130,7 +137,7 @@ public class BookingService : IBookingService
 
     public async Task<List<BookingResponse>> GetBookingsByUserIdAsync(string userId)
     {
-        BookingValidator.ValidateGetBookingsByUserId(userId);
+        _bookingValidator.ValidateGetBookingsByUserId(userId);
         
         var booking = await  _bookingReadRepository.GetByUserIdAsync(userId);
         
@@ -158,7 +165,7 @@ public class BookingService : IBookingService
 
     public async Task UpdateBookingStatusAsync(Guid id, BookingStatus status)
     {
-        BookingValidator.ValidateUpdateBookingStatus(status);
+        _bookingValidator.ValidateUpdateBookingStatus(status);
         await _bookingWriteRepository.UpdateStatusAsync(id, status);
     }
 }
