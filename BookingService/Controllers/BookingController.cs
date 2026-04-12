@@ -26,6 +26,10 @@ public class BookingController : ControllerBase
                 return BadRequest();
             return Ok(result);
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
         catch (Exception ex)
         {
             return StatusCode(500, ex.Message);
@@ -56,6 +60,10 @@ public class BookingController : ControllerBase
             var result = await _bookingService.GetBookingsByUserIdAsync(userId);
             return Ok(result);
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
         catch (Exception ex)
         {
             return StatusCode(500, ex.Message);
@@ -69,6 +77,10 @@ public class BookingController : ControllerBase
         {
             await _bookingService.UpdateBookingStatusAsync(id, status);
             return Ok();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {

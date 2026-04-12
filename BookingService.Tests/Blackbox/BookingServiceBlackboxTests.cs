@@ -93,6 +93,7 @@ public class BookingServiceBlackboxTests
     {
         var request = ValidRequest(passengerCount);
         var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
         Assert.Equal(passengerCount, result.Passengers.Count);
     }
     
@@ -112,7 +113,36 @@ public class BookingServiceBlackboxTests
     {
         var request = ValidRequest();
         var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
         Assert.NotNull(result);
+    }
+    
+    //Child discount BVA
+    [Fact]
+    public async Task CreateBooking_PassengerAged11_ReturnsDiscountedPrice()
+    {
+        var request = ValidRequest(dateOfBirth: new  DateTime(2015, 2, 8));
+        var result =  await _bookingService.CreateBookingAsync(request, "testuser");
+        
+        Assert.Equal(500, result.TotalPrice);
+    }
+
+    [Fact]
+    public async Task CreateBooking_PassengerAged12_ReturnsFullPrice()
+    {
+        var request = ValidRequest(dateOfBirth: new DateTime(2014, 2, 8));
+        var result =  await _bookingService.CreateBookingAsync(request, "testuser");
+        
+        Assert.Equal(1000, result.TotalPrice);
+    }
+
+    [Fact]
+    public async Task CreateBooking_PassengerAged13_ReturnsFullPrice()
+    {
+        var request = ValidRequest(dateOfBirth: new DateTime(2013, 2, 8));
+        var result =  await _bookingService.CreateBookingAsync(request, "testuser");
+        
+        Assert.Equal(1000, result.TotalPrice);
     }
     
     //Total price decision table
@@ -121,6 +151,7 @@ public class BookingServiceBlackboxTests
     {
         var request = ValidRequest();
         var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
         Assert.Equal(1000, result.TotalPrice);
     }
 
@@ -129,6 +160,7 @@ public class BookingServiceBlackboxTests
     {
         var request = ValidRequest(hasExtraBaggage: true);
         var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
         Assert.Equal(1200, result.TotalPrice);
     }
 
@@ -137,6 +169,7 @@ public class BookingServiceBlackboxTests
     {
         var request = ValidRequest(dateOfBirth: new DateTime(2018, 5, 8));
         var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
         Assert.Equal(500, result.TotalPrice);
     }
 
@@ -145,6 +178,7 @@ public class BookingServiceBlackboxTests
     {
         var request = ValidRequest(dateOfBirth: new DateTime(2018, 5, 8), hasExtraBaggage: true);
         var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
         Assert.Equal(700, result.TotalPrice);
     }
     
@@ -154,6 +188,7 @@ public class BookingServiceBlackboxTests
     {
         var request = ValidRequest(isOneWay: true, returnFlightId: null);
         var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
         Assert.NotNull(result);
     }
 
@@ -178,6 +213,33 @@ public class BookingServiceBlackboxTests
     {
         var request = ValidRequest(isOneWay: false, returnFlightId: "ReturnFlight123");
         var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
         Assert.NotNull(result);
+    }
+    
+    //Passenger count EP
+    [Fact]
+    public async Task CreateBooking_WithNegativePassengerCount_ThrowsArgumentException()
+    {
+        var request = ValidRequest(passengerCount: -5);
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _bookingService.CreateBookingAsync(request, "testuser"));
+    }
+
+    [Fact]
+    public async Task CreateBooking_WithFivePassengers_ReturnsCorrectPassengerCount()
+    {
+        var request = ValidRequest(passengerCount: 5);
+        var result = await _bookingService.CreateBookingAsync(request, "testuser");
+        
+        Assert.Equal(5, result.Passengers.Count);
+    }
+    
+    [Fact]
+    public async Task CreateBooking_WithFifteenPassengers_ThrowsArgumentException()
+    {
+        var request = ValidRequest(passengerCount: 15);
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _bookingService.CreateBookingAsync(request, "testuser"));
     }
 }
