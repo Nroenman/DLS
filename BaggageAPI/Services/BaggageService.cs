@@ -6,9 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BaggageAPI.Services;
 
-public class BaggageService(AppDbContext context) : IBaggageService
+public class BaggageService(AppDbContext context, RabbitMqService rabbitMq) : IBaggageService
 {
     private readonly AppDbContext _context = context;
+    private readonly RabbitMqService _rabbitMq = rabbitMq; 
 
     public async Task<Baggage> CreateAsync(CreateBaggageDto dto)
     {
@@ -24,24 +25,34 @@ public class BaggageService(AppDbContext context) : IBaggageService
         };
 
         _context.Baggages.Add(baggage);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(); 
 
-        //  Send event via RabbitMQ
-        // "BaggageCheckedIn"
+        _rabbitMq.Publish("baggagequeue", new
+        {
+            Event = "BaggageCheckedIn",
+            Data = baggage
+        });
 
         return baggage;
-    }
+    } 
 
-    public async Task<Baggage> UpdateStatusAsync(Guid id, UpdateBaggageStatusDto dto)
+    public async Task<Baggage?> UpdateStatusAsync(Guid id, UpdateBaggageStatusDto dto)
     {
         var baggage = await _context.Baggages.FindAsync(id);
+
+        if (baggage is null) return null; // ✅ Fix 4: null guard
 
         baggage.Status = dto.Status;
         baggage.CurrentLocation = dto.Location;
 
         await _context.SaveChangesAsync();
 
-        // 🔔 Publish event: BaggageStatusUpdated
+        
+        _rabbitMq.Publish("baggagequeue", new
+        {
+            Event = "BaggageStatusUpdated",
+            Data = baggage
+        });
 
         return baggage;
     }
