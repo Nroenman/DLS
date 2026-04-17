@@ -76,7 +76,7 @@ public class BookingController : ControllerBase
         try
         {
             await _bookingService.UpdateBookingStatusAsync(id, status);
-            return Ok(status);
+            return Ok("Booking status updated");
         }
         catch (ArgumentException ex)
         {
