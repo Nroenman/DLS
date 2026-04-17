@@ -1,0 +1,4 @@
+﻿DELETE FROM "Passengers" WHERE "BookingId" IN
+    (SELECT "Id" FROM "Bookings" WHERE "UserId" = 'keycloak userId');
+
+DELETE FROM "Bookings" WHERE "UserId" = 'keycloak userId';
