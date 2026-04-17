@@ -268,4 +268,62 @@ public class BookingServiceWhiteboxTests
         
         Assert.Equal(500, response.TotalPrice);
     }
+    
+    //Cancel booking
+    [Fact]
+    public void ValidateCancelBooking_WithNoBooking_ThrowsArgumentException()
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _bookingValidator.ValidateCancelBooking(null, "testuser"));
+
+        Assert.Equal("Booking not found", exception.Message);
+    }
+    
+    [Fact]
+    public void ValidateCancelBooking_WithWrongUserId_ThrowsArgumentException()
+    {
+        var booking = new Models.Booking
+        {
+            Id = Guid.NewGuid(),
+            UserId = "correctuser",
+            Status = Models.BookingStatus.Confirmed
+        };
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _bookingValidator.ValidateCancelBooking(booking, "wronguser"));
+
+        Assert.Equal("Not authorized", exception.Message);
+    }
+    
+    [Fact]
+    public void ValidateCancelBooking_WithAlreadyCancelledBooking_ThrowsArgumentException()
+    {
+        var booking = new Models.Booking
+        {
+            Id = Guid.NewGuid(),
+            UserId = "testuser",
+            Status = Models.BookingStatus.Cancelled
+        };
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _bookingValidator.ValidateCancelBooking(booking, "testuser"));
+
+        Assert.Equal("Booking is already cancelled", exception.Message);
+    }
+    
+    [Fact]
+    public void ValidateCancelBooking_WithValidBooking_DoesNotThrow()
+    {
+        var booking = new Models.Booking
+        {
+            Id = Guid.NewGuid(),
+            UserId = "testuser",
+            Status = Models.BookingStatus.Confirmed
+        };
+
+        var exception = Record.Exception(() =>
+            _bookingValidator.ValidateCancelBooking(booking, "testuser"));
+
+        Assert.Null(exception);
+    }
 }
