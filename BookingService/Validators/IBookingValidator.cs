@@ -12,4 +12,5 @@ public interface IBookingValidator
     void ValidateBookingDetails(CreateBookingRequest request);
     void ValidateGetBookingsByUserId(string userId);
     void ValidateUpdateBookingStatus(BookingStatus status);
+    void ValidateCancelBooking(Booking status, string userId);
 }

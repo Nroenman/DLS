@@ -168,4 +168,11 @@ public class BookingService : IBookingService
         _bookingValidator.ValidateUpdateBookingStatus(status);
         await _bookingWriteRepository.UpdateStatusAsync(id, status);
     }
+
+    public async Task CancelBookingAsync(Guid id, string userId)
+    {
+        var booking = await _bookingReadRepository.GetByIdAsync(id);
+        _bookingValidator.ValidateCancelBooking(booking, userId);
+        await _bookingWriteRepository.UpdateStatusAsync(id, BookingStatus.Cancelled);
+    }
 }

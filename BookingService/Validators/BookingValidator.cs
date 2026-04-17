@@ -79,4 +79,16 @@ public class BookingValidator : IBookingValidator
         if (!Enum.IsDefined(typeof(BookingStatus), status))
             throw new ArgumentException("Invalid booking status");
     }
+
+    public void ValidateCancelBooking(Booking booking, string userId)
+    {
+        if (booking == null)
+            throw new ArgumentException("Booking not found");
+    
+        if (booking.UserId != userId)
+            throw new ArgumentException("Not authorized");
+    
+        if (booking.Status == BookingStatus.Cancelled)
+            throw new ArgumentException("Booking is already cancelled");
+    }
 }
