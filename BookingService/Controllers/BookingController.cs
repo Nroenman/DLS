@@ -76,7 +76,26 @@ public class BookingController : ControllerBase
         try
         {
             await _bookingService.UpdateBookingStatusAsync(id, status);
-            return Ok();
+            return Ok(status);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
+    }
+
+    [HttpPut("{id}/cancel")]
+    public async Task<IActionResult> CancelBookingAsync(Guid id, BookingStatus status)
+    {
+        try
+        {
+            var userId = "keycloak userId";
+            await _bookingService.CancelBookingAsync(id, userId);
+            return Ok("Booking cancelled");
         }
         catch (ArgumentException ex)
         {
