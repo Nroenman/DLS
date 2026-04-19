@@ -217,6 +217,17 @@ public class BookingServiceWhiteboxTests
 
         Assert.Equal("Contact email is required", exception.Message);
     }
+    
+    [Fact]
+    public void ValidateBookingDetails_WithInvalidEmailFormat_ThrowsArgumentException()
+    {
+        var request = ValidRequest();
+        request.ContactEmail = "notvalid@email";
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _bookingValidator.ValidateBookingDetails(request));
+
+        Assert.Equal("Contact email format is invalid", exception.Message);
+    }
 
     [Fact]
     public void ValidateBookingDetails_WithEmptyContactPhone_ThrowsArgumentException()
@@ -325,5 +336,17 @@ public class BookingServiceWhiteboxTests
             _bookingValidator.ValidateCancelBooking(booking, "testuser"));
 
         Assert.Null(exception);
+    }
+    
+    //Pricing
+    [Fact]
+    public async Task CreateBooking_WhenPricingIsNull_ThrowsInvalidOperationException()
+    {
+        _mockPricingRepository.Setup(x => x.GetPricingAsync())
+            .ReturnsAsync((Models.Pricing)null);
+        var request = ValidRequest();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _bookingService.CreateBookingAsync(request, "testuser"));
     }
 }

@@ -64,6 +64,9 @@ public class BookingValidator : IBookingValidator
         if (string.IsNullOrEmpty(request.ContactEmail))
             throw new ArgumentException("Contact email is required");
         
+        if (!System.Text.RegularExpressions.Regex.IsMatch(request.ContactEmail, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            throw new ArgumentException("Contact email format is invalid");
+        
         if (string.IsNullOrEmpty(request.ContactPhone))
             throw new ArgumentException("Contact phone number is required");
     }
