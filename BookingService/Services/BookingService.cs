@@ -62,6 +62,8 @@ public class BookingService : IBookingService
         
         booking.Passengers = passengers;
         var pricing = await _pricingRepository.GetPricingAsync();
+        if (pricing == null)
+            throw new InvalidOperationException("Pricing configuration is missing. Cannot calculate total price.");
 
         booking.TotalPrice = passengers.Sum(p =>
         {

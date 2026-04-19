@@ -1,0 +1,2 @@
+﻿
+dotnet ef database update --connection "Host=localhost;Port=5433;Database=BookingTestDb;Username=testdb;Password=testpassword"

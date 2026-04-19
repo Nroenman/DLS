@@ -89,7 +89,7 @@ public class BookingController : ControllerBase
     }
 
     [HttpPut("{id}/cancel")]
-    public async Task<IActionResult> CancelBookingAsync(Guid id, BookingStatus status)
+    public async Task<IActionResult> CancelBookingAsync(Guid id)
     {
         try
         {
