@@ -2,6 +2,40 @@ require('dotenv').config();
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+const webhook = async (req, res) => 
+{
+
+  let paymentSession = {};
+
+  // Webhook
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    return res.status(400).send(`Webhook error: ${err.message}`);
+  }
+
+  console.log('EVENT TYPE WAS: '+event.type);
+
+  switch (event.type) {
+    case "checkout.session.completed": {
+     
+      res.send('Success page');
+      break;
+    }
+    case "payment_intent.payment_failed":
+      req.send('Failure page');
+
+    case "checkout.session.expired":
+      // NOT COMPLETED (abandoned)
+      break;
+  }
+
+  res.json(paymentSession);
+}
+
 const stripeCheckout = async (req, res) => 
 {
       
@@ -45,7 +79,26 @@ const stripePayment = async (req, res) =>
   }
 }
 
-const success = (req, res) => res.send("success");
-const cancel = (req, res) => res.send("cancel");  
+const successRedirect = (req, res) => 
+{
+  //Send payment status to booking service here
 
-module.exports = {stripePayment, stripeCheckout, success, cancel};
+  // Send notification of payment status to notification service
+
+  // Temperary response 
+  res.send("success");
+
+}
+  const cancelRedirect = (req, res) => 
+  {
+
+    //Send payment status to booking service here
+
+    // Send notification of payment status to notification service
+
+    // Temperary response
+    res.send("cancel");  
+  }
+    
+
+module.exports = {stripePayment, stripeCheckout, successRedirect , cancelRedirect, webhook};
