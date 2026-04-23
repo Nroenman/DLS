@@ -10,10 +10,13 @@ module.exports = {
             await stripeService.stripePayment(req, res);
         },
         success: async (req, res) => {
-            await stripeService.success(req, res);
+            await stripeService.successRedirect(req, res);
         },
         cancel: async (req, res) => {
-            await stripeService.cancel(req, res);
+            await stripeService.cancelRedirect(req, res);
+        },
+        webhook: async (req, res) => {
+            await stripeService.webhook(req, res);
         }
     },
     paypal: {
