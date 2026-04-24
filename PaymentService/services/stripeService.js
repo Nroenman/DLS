@@ -2,42 +2,26 @@ require('dotenv').config();
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const webhook = async (req, res) => 
-{
+const sendNotification = async (status) => {
+  // const response = await fetch("http://notification-service/api/notifications", {
+  //   method: "POST",
+  //   headers: {
+  //     "Content-Type": "application/json"
+  //   },
+  //   body: JSON.stringify({
+  //     type: "PAYMENT_SUCCESS",
+  //     flightID
+  //   })
+  // });
 
-  let paymentSession = {};
-
-  // Webhook
-  const sig = req.headers["stripe-signature"];
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    return res.status(400).send(`Webhook error: ${err.message}`);
-  }
-
-  console.log('EVENT TYPE WAS: '+event.type);
-
-  switch (event.type) {
-    case "checkout.session.completed": {
-     
-      res.send('Success page');
-      break;
-    }
-    case "payment_intent.payment_failed":
-      req.send('Failure page');
-
-    case "checkout.session.expired":
-      // NOT COMPLETED (abandoned)
-      break;
-  }
-
-  res.json(paymentSession);
-}
+  // mock response for now
+  return status;
+};
 
 const stripeCheckout = async (req, res) => 
 {
+
+  const flightID = req.body.flightID;
       
   try {
     const session = await stripe.checkout.sessions.create({
@@ -52,8 +36,8 @@ const stripeCheckout = async (req, res) =>
         },
         quantity: 1
       }],
-      success_url: `http://localhost:3000/api/payment/stripe/success`,
-      cancel_url: `http://localhost:3000/api/payment/stripe/cancel`
+      success_url: `http://localhost:3000/api/payment/stripe/success/${flightID}`,
+      cancel_url: `http://localhost:3000/api/payment/stripe/cancel/${flightID}`
     });
 
     res.json({ url: session.url });
@@ -79,26 +63,35 @@ const stripePayment = async (req, res) =>
   }
 }
 
-const successRedirect = (req, res) => 
+const successRedirect = async (req, res) => 
 {
-  //Send payment status to booking service here
+  const paymentStatus = {
+    flightID: req.params.flightID,     
+    isPaid: true};
 
-  // Send notification of payment status to notification service
+  try {
+    await sendNotification("PAYMENT_SUCCESS");
+  } catch (error) {
+    console.error("Failed to send notification: ", error);
+    res.status(500).json({ error: error.message });
+  }
 
-  // Temperary response 
-  res.send("success");
-
+  res.json(paymentStatus).status(200);
 }
-  const cancelRedirect = (req, res) => 
+  const cancelRedirect = async (req, res) => 
   {
+    try {
+      await sendNotification("PAYMENT_CANCELLED");
+    } catch (error) {
+      console.error("Failed to send notification: ", error);
+      res.status(500).json({ error: error.message });
+    }
 
-    //Send payment status to booking service here
-
-    // Send notification of payment status to notification service
-
-    // Temperary response
-    res.send("cancel");  
+    res.json({
+      flightID: req.params.flightID,
+      isPaid: false
+    }).status(200);
   }
     
 
-module.exports = {stripePayment, stripeCheckout, successRedirect , cancelRedirect, webhook};
+module.exports = {stripePayment, stripeCheckout, successRedirect , cancelRedirect};
