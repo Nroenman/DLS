@@ -1,12 +1,19 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Notification;
 
-var host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
-    {
-        services.AddSingleton<MailSender>();
-    })
-    .Build();
 
-await host.RunAsync();
+class Program
+{
+    static Task Main(string[] args)
+    {
+        Console.WriteLine("Starter notification service...");
+
+        MailSender mailSender = new MailSender();
+
+        RabbitMq rabbitMQ = new(new MailSender());
+        while (true)
+        {
+          rabbitMQ.StartAsync(CancellationToken.None).GetAwaiter().GetResult();
+
+        }
+    }
+}
