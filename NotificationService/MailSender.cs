@@ -10,7 +10,7 @@ using MailKit.Net.Smtp;
 
 namespace Notification
 {
-    public class MailSender
+    public class MailSender: IMailSender
     {
         private string smtpHost = "smtp-relay.brevo.com";
         private int smtpPort = 587;
