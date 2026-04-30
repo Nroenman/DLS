@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: baggage
+data:
+  ASPNETCORE_ENVIRONMENT: Development
+  RabbitMQ__Host: rabbitmq
+  RabbitMQ__Port: "5672"

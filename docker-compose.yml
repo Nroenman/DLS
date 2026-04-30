@@ -113,8 +113,8 @@ services:
 
   gateway:
     build:
-      context: ./flight
-      dockerfile: src/AirportSystem.Gateway/Dockerfile
+      context: ./gateway
+      dockerfile: Dockerfile
     container_name: airport_gateway
     restart: unless-stopped
     ports:
