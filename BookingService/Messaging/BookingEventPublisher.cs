@@ -8,6 +8,7 @@ public class BookingEventPublisher : IBookingEventPublisher, IDisposable
 {
     private IConnection? _connection;
     private const string NotificationQueue = "Notification";
+    private const string PaymentQueue = "payment_queue";
 
     public async Task InitializeAsync(IConfiguration configuration)
     {
@@ -24,6 +25,14 @@ public class BookingEventPublisher : IBookingEventPublisher, IDisposable
         await using var channel = await _connection.CreateChannelAsync();
         await channel.QueueDeclareAsync(
             queue: NotificationQueue,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null
+        );
+        
+        await channel.QueueDeclareAsync(
+            queue: PaymentQueue,
             durable: true,
             exclusive: false,
             autoDelete: false,
@@ -52,10 +61,25 @@ public class BookingEventPublisher : IBookingEventPublisher, IDisposable
         );
     }
 
-    public Task PublishPaymentMessage(PaymentMessage message)
+    public async Task PublishPaymentMessage(PaymentMessage message)
     {
-        // To be implemented once Payment Service queue is ready
-        throw new NotImplementedException();
+        var json = JsonSerializer.Serialize(message);
+        var body = Encoding.UTF8.GetBytes(json);
+
+        await using var channel = await _connection!.CreateChannelAsync();
+        var props = new BasicProperties
+        {
+            Persistent = true,
+            ContentType = "application/json"
+        };
+
+        await channel.BasicPublishAsync(
+            exchange: "",
+            routingKey: PaymentQueue,
+            mandatory: false,
+            basicProperties: props,
+            body: body
+        );
     }
 
     public void Dispose() => _connection?.Dispose();

@@ -21,6 +21,7 @@ builder.Services.AddScoped<IBookingService, BookingService.Services.BookingServi
 var publisher = new BookingEventPublisher();
 await publisher.InitializeAsync(builder.Configuration);
 builder.Services.AddSingleton<IBookingEventPublisher>(publisher);
+builder.Services.AddHostedService<BookingEventConsumer>();
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
