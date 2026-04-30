@@ -1,3 +1,6 @@
-.idea/
-bin/
+*.cache
+*.user
 obj/
+bin/
+.idea/
+*.sln.DotSettings.user
