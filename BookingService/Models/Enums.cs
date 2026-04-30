@@ -7,3 +7,10 @@ public enum BookingStatus
     Confirmed,
     Cancelled
 }
+
+public enum SeatClass
+{
+    Economy,
+    Business,
+    First
+}
