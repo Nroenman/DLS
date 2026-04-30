@@ -1,0 +1,21 @@
+﻿services:
+  db_test:
+    image: postgres:15-trixie
+    container_name: booking_test_db
+    environment:
+      POSTGRES_DB: BookingTestDb
+      POSTGRES_USER: testdb
+      POSTGRES_PASSWORD: testpassword
+    ports:
+      - "5435:5432"
+    volumes:
+      - booking_test_db_data:/var/lib/postgresql/data
+    networks:
+      - kader_local_network
+
+networks:
+  kader_local_network:
+    name: kader_local_network
+
+volumes:
+  booking_test_db_data:

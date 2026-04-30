@@ -27,6 +27,8 @@ public class BookingDatabaseIntegrationTests : IAsyncLifetime
         _context = new BookingDbContext(options);
         _readRepository = new BookingReadRepository(_context);
         _writeRepository = new BookingWriteRepository(_context);
+        
+        await _context.Database.MigrateAsync();
 
         await _context.Database.ExecuteSqlRawAsync("DELETE FROM \"Passengers\"");
         await _context.Database.ExecuteSqlRawAsync("DELETE FROM \"Bookings\"");

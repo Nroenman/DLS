@@ -3,6 +3,7 @@ using Moq;
 using BookingService.Services;
 using BookingService.Repositories;
 using BookingService.Validators;
+using BookingService.Messaging;
 
 namespace BookingService.Tests.Blackbox;
 
@@ -13,6 +14,7 @@ public class BookingServiceBlackboxTests
     private readonly Mock<IBookingWriteRepository> _mockBookingWriteRepository;
     private readonly Mock<IPricingRepository> _mockPricingRepository;
     private readonly IBookingValidator _bookingValidator;
+    private readonly Mock<IBookingEventPublisher> _mockBookingEventPublisher;
 
     public BookingServiceBlackboxTests()
     {
@@ -20,6 +22,7 @@ public class BookingServiceBlackboxTests
         _mockBookingWriteRepository = new Mock<IBookingWriteRepository>();
         _mockPricingRepository = new Mock<IPricingRepository>();
         _bookingValidator = new BookingValidator();
+        _mockBookingEventPublisher = new Mock<IBookingEventPublisher>();
         
         _mockPricingRepository.Setup(x => x.GetPricingAsync())
             .ReturnsAsync(new Models.Pricing
@@ -33,7 +36,8 @@ public class BookingServiceBlackboxTests
             _mockBookingReadRepository.Object, 
             _mockBookingWriteRepository.Object, 
             _mockPricingRepository.Object,
-            _bookingValidator);
+            _bookingValidator,
+            _mockBookingEventPublisher.Object);
     }
 
     private CreateBookingRequest ValidRequest(
