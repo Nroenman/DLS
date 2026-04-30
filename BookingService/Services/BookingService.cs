@@ -85,6 +85,16 @@ public class BookingService : IBookingService
             return price;
         });
         await _bookingWriteRepository.AddAsync(booking);
+        
+        var notificationMessage = new NotificationMessage
+        {
+            FromName = "Airport Booking Service",
+            ToEmail = request.ContactEmail,
+            Subject = "Booking Confirmation",
+            Body = $"<h2>Booking Confirmed</h2><p>Your booking with ID {booking.Id} has been created successfully. Total price: {booking.TotalPrice}</p>"
+        };
+
+        await _bookingEventPublisher.PublishNotificationMessage(notificationMessage);
 
         var paymentMessage = new PaymentMessage
         {

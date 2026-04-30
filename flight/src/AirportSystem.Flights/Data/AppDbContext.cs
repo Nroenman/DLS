@@ -57,8 +57,6 @@ public class AppDbContext : DbContext
              .IsRequired(false);
         });
 
-<<<<<<< HEAD
-        // ── Booking ───────────────────────────────────────────────────────────
         // ── FlightFollow ──────────────────────────────────────────────────────
         modelBuilder.Entity<FlightFollow>(e =>
         {
