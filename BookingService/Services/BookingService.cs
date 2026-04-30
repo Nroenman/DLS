@@ -2,6 +2,7 @@
 using BookingService.Models;
 using BookingService.Repositories;
 using BookingService.Validators;
+using BookingService.Messaging;
 
 namespace BookingService.Services;
 
@@ -11,17 +12,20 @@ public class BookingService : IBookingService
     private readonly IBookingWriteRepository _bookingWriteRepository;
     private readonly IPricingRepository _pricingRepository;
     private readonly IBookingValidator _bookingValidator;
+    private readonly IBookingEventPublisher _bookingEventPublisher;
     
     public BookingService(
         IBookingReadRepository bookingReadRepository,
         IBookingWriteRepository bookingWriteRepository,
         IPricingRepository pricingRepository,
-        IBookingValidator bookingValidator)
+        IBookingValidator bookingValidator,
+        IBookingEventPublisher bookingEventPublisher)
         {
         _bookingReadRepository = bookingReadRepository;
         _bookingWriteRepository = bookingWriteRepository;
         _pricingRepository = pricingRepository;
         _bookingValidator = bookingValidator;
+        _bookingEventPublisher = bookingEventPublisher;
         }
 
     public async Task<BookingResponse> CreateBookingAsync(CreateBookingRequest request, string userId)
@@ -85,6 +89,16 @@ public class BookingService : IBookingService
             return price;
         });
         await _bookingWriteRepository.AddAsync(booking);
+        
+        var notificationMessage = new NotificationMessage
+        {
+            FromName = "Airport Booking Service",
+            ToEmail = request.ContactEmail,
+            Subject = "Booking Confirmation",
+            Body = $"<h2>Booking Confirmed</h2><p>Your booking with ID {booking.Id} has been created successfully. Total price: {booking.TotalPrice}</p>"
+        };
+
+        await _bookingEventPublisher.PublishNotificationMessage(notificationMessage);
 
         BookingResponse response = new BookingResponse()
         {
