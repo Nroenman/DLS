@@ -1,7 +1,10 @@
 .idea/
 .vs/
 bin/
+*.cache
+*.user
 obj/
 .env
 BookingDbContextFactory.cs
 node_modules/
+*.sln.DotSettings.user
