@@ -1,54 +1,44 @@
-require('dotenv').config();
+require("dotenv").config();
+
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const sendNotification = async (status) => {
-  // const response = await fetch("http://notification-service/api/notifications", {
-  //   method: "POST",
-  //   headers: {
-  //     "Content-Type": "application/json"
-  //   },
-  //   body: JSON.stringify({
-  //     type: "PAYMENT_SUCCESS",
-  //     flightID
-  //   })
-  // });
+const { sendToQueue } = require("../rabbitmq/producer");
 
-  // mock response for now
-  return status;
+const sendNotification = async (paymentStatus) => {
+  await sendToQueue("payment_status_queue", paymentStatus);
 };
 
-const stripeCheckout = async (req, res) => 
-{
-
+const stripeCheckout = async (req, res) => {
   const flightID = req.body.flightID;
-      
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      line_items: [{
-        price_data: {
-          currency: "DKK",
-          product_data: {
-            name: "Testprodukt"
+      line_items: [
+        {
+          price_data: {
+            currency: "DKK",
+            product_data: {
+              name: "Testprodukt"
+            },
+            unit_amount: 5000
           },
-          unit_amount: 5000
-        },
-        quantity: 1
-      }],
+          quantity: 1
+        }
+      ],
       success_url: `http://localhost:3000/api/payment/stripe/success/${flightID}`,
       cancel_url: `http://localhost:3000/api/payment/stripe/cancel/${flightID}`
     });
 
-    res.json({ url: session.url });
+    res.status(200).json({ url: session.url });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-}
+};
 
-const stripePayment = async (req, res) => 
-{
-      try {
+const stripePayment = async (req, res) => {
+  try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: 5000,
       currency: "DKK",
@@ -57,41 +47,55 @@ const stripePayment = async (req, res) =>
       }
     });
 
-     res.json(paymentIntent).status(200);
+    res.status(200).json(paymentIntent);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-}
+};
 
-const successRedirect = async (req, res) => 
-{
+const successRedirect = async (req, res) => {
   const paymentStatus = {
-    flightID: req.params.flightID,     
-    isPaid: true};
+    flightID: req.params.flightID,
+    isPaid: true,
+    status: "PAYMENT_SUCCESS"
+  };
 
   try {
-    await sendNotification("PAYMENT_SUCCESS");
+    await sendNotification(paymentStatus);
+
+    res.status(200).json(paymentStatus);
   } catch (error) {
-    console.error("Failed to send notification: ", error);
-    res.status(500).json({ error: error.message });
+    console.error("Failed to send RabbitMQ notification:", error.message);
+
+    res.status(500).json({
+      error: error.message
+    });
   }
+};
 
-  res.json(paymentStatus).status(200);
-}
-  const cancelRedirect = async (req, res) => 
-  {
-    try {
-      await sendNotification("PAYMENT_CANCELLED");
-    } catch (error) {
-      console.error("Failed to send notification: ", error);
-      res.status(500).json({ error: error.message });
-    }
+const cancelRedirect = async (req, res) => {
+  const paymentStatus = {
+    flightID: req.params.flightID,
+    isPaid: false,
+    status: "PAYMENT_CANCELLED"
+  };
 
-    res.json({
-      flightID: req.params.flightID,
-      isPaid: false
-    }).status(200);
+  try {
+    await sendNotification(paymentStatus);
+
+    res.status(200).json(paymentStatus);
+  } catch (error) {
+    console.error("Failed to send RabbitMQ notification:", error.message);
+
+    res.status(500).json({
+      error: error.message
+    });
   }
-    
+};
 
-module.exports = {stripePayment, stripeCheckout, successRedirect , cancelRedirect};
+module.exports = {
+  stripePayment,
+  stripeCheckout,
+  successRedirect,
+  cancelRedirect
+};
