@@ -1,0 +1,41 @@
+﻿version: "3.9"
+services:
+  baggage-api:
+    build: .
+    container_name: baggage-api
+    ports:
+      - "5000:8080"
+    depends_on:
+      - postgres
+      - rabbitmq
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=baggage_db;Username=postgres;Password=postgres
+      - RabbitMQ__Host=rabbitmq   
+
+  postgres:
+    image: postgres:15
+    container_name: baggage-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: baggage_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: baggage-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"    
+      - "15672:15672"  
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+volumes:
+  postgres_data:

@@ -1,0 +1,131 @@
+services:
+
+  # ── Infrastructure ────────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: airport_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: airport_system
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: airport_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: airport_keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm --health-enabled=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/airport_system
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: postgres
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/airport-realm.json:/opt/keycloak/data/import/airport-realm.json:ro
+
+  # ── Services ──────────────────────────────────────────────────────────────────
+
+  flight:
+    build:
+      context: ./flight
+      dockerfile: src/AirportSystem.Flights/Dockerfile
+    container_name: airport_flight
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=airport_system;Username=postgres;Password=postgres"
+      Keycloak__BaseUrl: "http://keycloak:8080"
+      Keycloak__Realm: "airport-system"
+      Keycloak__ClientId: "airport-api"
+      Keycloak__ClientSecret: "airport-api-secret"
+      Keycloak__FrontendClientId: "airport-frontend"
+      RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Port: "5672"
+      RabbitMQ__Username: "guest"
+      RabbitMQ__Password: "guest"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  booking:
+    build:
+      context: ./BookingService
+      dockerfile: Dockerfile
+    container_name: airport_booking
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=airport_system;Username=postgres;Password=postgres"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  notification:
+    build:
+      context: ./NotificationService
+      dockerfile: Dockerfile
+    container_name: airport_notification
+    restart: unless-stopped
+    environment:
+      RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__Port: "5672"
+      RabbitMQ__Username: "guest"
+      RabbitMQ__Password: "guest"
+      Mail__FromEmail: "noreply@airport.dk"
+      Mail__FromName: "Airport Notification Service"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: ./flight
+      dockerfile: src/AirportSystem.Gateway/Dockerfile
+    container_name: airport_gateway
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Keycloak__BaseUrl: "http://keycloak:8080"
+      Keycloak__Realm: "airport-system"
+    depends_on:
+      - flight
+      - keycloak
+
+volumes:
+  postgres_data:
