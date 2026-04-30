@@ -1,6 +1,3 @@
-﻿.idea/
+.idea/
 bin/
 obj/
-
-.env
-BookingDbContextFactory.cs
