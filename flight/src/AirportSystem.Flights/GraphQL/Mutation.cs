@@ -78,6 +78,8 @@ public class Mutation
         await eventSender.SendAsync(
             $"{nameof(Subscription.OnFlightUpdated)}_{flight.Id}", flight);
 
+        await eventSender.SendAsync(nameof(Subscription.OnAnyFlightUpdated), flight);
+
         return new FlightPayload(flight);
     }
 
@@ -143,9 +145,13 @@ public class Mutation
     [GraphQLDescription("(Staff/Admin) Assign a flight to a gate.")]
     public async Task<GatePayload> AssignGate(
         AssignGateInput input,
-        [Service] IGateService gateService)
+        [Service] IGateService gateService,
+        [Service] IFlightService flightService,
+        [Service] ITopicEventSender eventSender)
     {
         var gate = await gateService.AssignFlightToGateAsync(input.GateId, input.FlightId);
+        var flight = await flightService.GetFlightByIdAsync(input.FlightId);
+        await eventSender.SendAsync(nameof(Subscription.OnAnyFlightUpdated), flight);
         return new GatePayload(gate);
     }
 
@@ -153,9 +159,13 @@ public class Mutation
     [GraphQLDescription("(Staff/Admin) Release a gate by removing the flight's gate assignment.")]
     public async Task<GatePayload> ReleaseGate(
         ReleaseGateInput input,
-        [Service] IGateService gateService)
+        [Service] IGateService gateService,
+        [Service] IFlightService flightService,
+        [Service] ITopicEventSender eventSender)
     {
         var gate = await gateService.ReleaseGateFromFlightAsync(input.FlightId);
+        var flight = await flightService.GetFlightByIdAsync(input.FlightId);
+        await eventSender.SendAsync(nameof(Subscription.OnAnyFlightUpdated), flight);
         return new GatePayload(gate);
     }
 }

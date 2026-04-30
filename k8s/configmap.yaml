@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: airport
+data:
+  ASPNETCORE_ENVIRONMENT: Development
+  Keycloak__BaseUrl: "http://keycloak:8080"
+  Keycloak__Realm: airport-system
+  Keycloak__ClientId: airport-api
+  Keycloak__FrontendClientId: airport-frontend
+  RabbitMQ__Host: rabbitmq
+  RabbitMQ__Port: "5672"
+  Mail__FromEmail: noreply@airport.dk
+  Mail__FromName: Airport Notification Service

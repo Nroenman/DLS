@@ -1,0 +1,27 @@
+loki:
+  enabled: true
+  isDefault: false
+  # In-memory storage — fine for a demo, logs are lost on restart
+  persistence:
+    enabled: false
+  config:
+    limits_config:
+      retention_period: 24h
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: 24h
+
+promtail:
+  enabled: true
+  config:
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+    snippets:
+      # Add app label from pod label so Grafana can filter by service name
+      extraRelabelConfigs:
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          target_label: app
+
+# Grafana is already deployed by kube-prometheus-stack
+grafana:
+  enabled: false

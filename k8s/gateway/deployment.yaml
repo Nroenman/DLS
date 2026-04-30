@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: airport
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      initContainers:
+        - name: wait-for-flight
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z flight 8080; do echo "waiting for flight..."; sleep 2; done']
+        - name: wait-for-keycloak
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z keycloak 8080; do echo "waiting for keycloak..."; sleep 5; done']
+      containers:
+        - name: gateway
+          image: airport/gateway:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 30
