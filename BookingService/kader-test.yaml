@@ -12,6 +12,19 @@
       - booking_test_db_data:/var/lib/postgresql/data
     networks:
       - kader_local_network
+        
+  rabbitmq_test:
+    image: rabbitmq:3-management-alpine
+    container_name: booking_test_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   kader_local_network:

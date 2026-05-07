@@ -9,9 +9,13 @@ public class BookingEventPublisher : IBookingEventPublisher, IDisposable
     private IConnection? _connection;
     private const string NotificationQueue = "Notification";
     private const string PaymentQueue = "payment_queue";
+    private IConfiguration? _configuration;
 
     public async Task InitializeAsync(IConfiguration configuration)
     {
+        _configuration = configuration;
+        if (configuration.GetValue<bool>("DisableMessaging")) return;
+        
         var factory = new ConnectionFactory
         {
             HostName = configuration["RabbitMQ:Host"] ?? "localhost",
@@ -42,6 +46,7 @@ public class BookingEventPublisher : IBookingEventPublisher, IDisposable
 
     public async Task PublishNotificationMessage(NotificationMessage message)
     {
+        if (_configuration?.GetValue<bool>("DisableMessaging") == true) return;
         var json = JsonSerializer.Serialize(message);
         var body = Encoding.UTF8.GetBytes(json);
 
@@ -63,6 +68,7 @@ public class BookingEventPublisher : IBookingEventPublisher, IDisposable
 
     public async Task PublishPaymentMessage(PaymentMessage message)
     {
+        if (_configuration?.GetValue<bool>("DisableMessaging") == true) return;
         var json = JsonSerializer.Serialize(message);
         var body = Encoding.UTF8.GetBytes(json);
 

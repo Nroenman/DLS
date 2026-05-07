@@ -13,6 +13,12 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<BookingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+//Production
+//options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+//test
+//options.UseNpgsql(builder.Configuration.GetConnectionString("TestConnection")));
+
 builder.Services.AddScoped<IBookingReadRepository, BookingReadRepository>();
 builder.Services.AddScoped<IBookingWriteRepository, BookingWriteRepository>();
 builder.Services.AddScoped<IPricingRepository, PricingRepository>();

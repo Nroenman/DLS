@@ -77,6 +77,7 @@ public class BookingDatabaseIntegrationTests : IAsyncLifetime
         };
     }
 
+    //Create
     [Fact]
     public async Task AddAsync_WithValidBooking_SavesBookingToDatabase()
     {
@@ -89,6 +90,7 @@ public class BookingDatabaseIntegrationTests : IAsyncLifetime
         Assert.Equal(booking.Id, result.Id);
     }
 
+    //Get
     [Fact]
     public async Task GetByIdAsync_WithValidId_ReturnsBookingWithPassengers()
     {
@@ -124,6 +126,7 @@ public class BookingDatabaseIntegrationTests : IAsyncLifetime
         Assert.Equal(booking.UserId, result.First().UserId);
     }
 
+    //Update
     [Fact]
     public async Task UpdateStatusAsync_WithValidId_UpdatesBookingStatus()
     {
@@ -135,5 +138,16 @@ public class BookingDatabaseIntegrationTests : IAsyncLifetime
 
         Assert.NotNull(result);
         Assert.Equal(BookingStatus.Confirmed, result.Status);
+    }
+    
+    [Fact]
+    public async Task UpdateStatusAsync_WithInvalidId_DoesNotUpdateDatabase()
+    {
+        var invalidId = Guid.NewGuid();
+        await _writeRepository.UpdateStatusAsync(invalidId, BookingStatus.Confirmed);
+
+        var result = await _readRepository.GetByIdAsync(invalidId);
+
+        Assert.Null(result);
     }
 }
