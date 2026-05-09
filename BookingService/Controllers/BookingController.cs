@@ -2,6 +2,7 @@
 using BookingService.Models;
 using BookingService.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookingService.Controllers;
 
@@ -16,9 +17,10 @@ public class BookingController : ControllerBase
     }
 
     [HttpPost()]
+    [Authorize]
     public async Task<IActionResult> CreateBooking([FromBody]CreateBookingRequest booking)
     {
-        var userId = "keycloak userId";
+        var userId = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
         try
         {
             var result = await _bookingService.CreateBookingAsync(booking, userId);
@@ -53,6 +55,7 @@ public class BookingController : ControllerBase
     }
 
     [HttpGet("user/{userId}")]
+    [Authorize]
     public async Task<IActionResult> GetBookingsByUserIdAsync(string userId)
     {
         try
@@ -89,11 +92,12 @@ public class BookingController : ControllerBase
     }
 
     [HttpPut("{id}/cancel")]
+    [Authorize]
     public async Task<IActionResult> CancelBookingAsync(Guid id)
     {
         try
         {
-            var userId = "keycloak userId";
+            var userId = User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
             await _bookingService.CancelBookingAsync(id, userId);
             return Ok("Booking cancelled");
         }

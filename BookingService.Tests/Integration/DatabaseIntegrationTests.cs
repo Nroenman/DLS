@@ -18,7 +18,7 @@ public class BookingDatabaseIntegrationTests : IAsyncLifetime
             .AddJsonFile("appsettings.json")
             .Build();
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var connectionString = configuration.GetConnectionString("TestConnection");
 
         var options = new DbContextOptionsBuilder<BookingDbContext>()
             .UseNpgsql(connectionString)

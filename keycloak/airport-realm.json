@@ -1,5 +1,8 @@
 {
   "realm": "airport-system",
+  "attributes": {
+    "frontendUrl": "http://keycloak:8080",
+  },
   "displayName": "Airport System",
   "enabled": true,
   "registrationAllowed": false,
@@ -128,6 +131,24 @@
       ],
       "realmRoles": [
         "Staff",
+        "Passenger"
+      ]
+    },
+    {
+      "username": "passenger@airport.local",
+      "email": "passenger@airport.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Passenger1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
         "Passenger"
       ]
     },

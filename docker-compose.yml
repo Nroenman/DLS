@@ -97,11 +97,18 @@ services:
       RabbitMQ__Port: "5672"
       RabbitMQ__Username: "guest"
       RabbitMQ__Password: "guest"
+      Keycloak__AuthServerUrl: "http://keycloak:8080/"
+      Keycloak__Realm: "airport-system"
+      Keycloak__Resource: "airport-api"
+      Keycloak__Credentials__Secret: "airport-api-secret"
+      Keycloak__MetadataAddress: "http://keycloak:8080/realms/airport-system/.well-known/openid-configuration"
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      keycloak:
+        condition: service_started
 
   notification:
     build:
