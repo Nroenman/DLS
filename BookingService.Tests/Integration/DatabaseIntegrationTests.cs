@@ -4,7 +4,7 @@ using BookingService.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
-namespace BookingService.Tests.IntegrationTests;
+namespace BookingService.Tests.Integration;
 
 public class BookingDatabaseIntegrationTests : IAsyncLifetime
 {

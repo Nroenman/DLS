@@ -1,7 +1,7 @@
 {
   "realm": "airport-system",
   "attributes": {
-    "frontendUrl": "http://keycloak:8080",
+    "frontendUrl": "http://keycloak:8080"
   },
   "displayName": "Airport System",
   "enabled": true,
