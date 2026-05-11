@@ -1,18 +1,19 @@
 require("dotenv").config();
-
 const express = require("express");
-const bodyParser = require("body-parser");
-
 const paymentRoutes = require("./routes/paymentRoutes");
+const webhookRoutes = require("./routes/webhookRoutes");
 const { startConsumers } = require("./rabbitmq/consumer");
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(
+  "/api/payment/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  webhookRoutes
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
-
 app.use("/api/payment", paymentRoutes);
 
 app.listen(PORT, async () => {
@@ -21,6 +22,9 @@ app.listen(PORT, async () => {
   try {
     await startConsumers();
   } catch (error) {
-    console.error("Failed to start RabbitMQ consumers:", error.message);
+    console.error(
+      "Failed to start RabbitMQ consumers:",
+      error.message
+    );
   }
 });

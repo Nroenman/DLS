@@ -1,4 +1,5 @@
 const stripeService = require("../services/stripeService");
+const stripeWebhookService = require("../services/stripeWebhook");
 
 module.exports = {
   stripe: {
@@ -17,6 +18,9 @@ module.exports = {
 
     cancel: async (req, res) => {
       await stripeService.cancelRedirect(req, res);
+    },
+    webhook: async (req, res) => {
+      await stripeWebhookService.handleStripeWebhookRequest(req, res);
     }
   },
 

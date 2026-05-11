@@ -7,3 +7,5 @@ bin/
 BaggageAPI/obj/rider.project.restore.info
 *.info
 *.cache
+
+.env

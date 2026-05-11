@@ -139,6 +139,11 @@ services:
       PORT: "3000"
       RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
       STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET}"
+      DB_PASSWORD: "ali1234"
+      DB_HOST: "host.docker.internal"
+      DB_USER: "root"
+      DB_NAME: "flightbooking"
     depends_on:
       rabbitmq:
         condition: service_healthy
