@@ -6,15 +6,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const { sendToQueue } = require("../rabbitmq/producer");
 
-const sendNotification = async (paymentStatus) => {
-  await sendToQueue("payment_status_queue", paymentStatus);
+const sendNotification = async (notification) => {
+  await sendToQueue("Notification", notification);
 };
 
 const stripeCheckout = async (req, res) => {
   console.log("Received checkout request with body:", req.body);
 
   // Validate input start -- 
-  const { booking_id, user_id, amount, currency } = req.body;
+  const { booking_id, user_id, amount, currency, userEmail } = req.body;
 
   if (!booking_id || !user_id || !amount || !currency) {
     return res.status(400).json({
@@ -86,12 +86,13 @@ const stripeCheckout = async (req, res) => {
           }
         ],
 
-        success_url: `http://localhost:3001/api/payment/stripe/success/${booking_id}`,
-        cancel_url: `http://localhost:3001/api/payment/stripe/cancel/${booking_id}`,
+        success_url: `http://localhost:3001/api/payment/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `http://localhost:3001/api/payment/stripe/cancel?booking_id=${booking_id}`,
 
         metadata: {
           booking_id: String(booking_id),
-          user_id: String(user_id)
+          user_id: String(user_id),
+          userEmail: userEmail
         }
       },
       {
@@ -137,11 +138,25 @@ const stripeCheckout = async (req, res) => {
 };
 
 const successRedirect = async (req, res) => {
+   
+  const sessionId = req.query.session_id;
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const email = session.metadata.userEmail;
+  const booking_id = session.metadata.booking_id;
+  
   const paymentStatus = {
-    booking_id: req.params.booking_id,
+    booking_id: booking_id,
     isPaid: true,
     status: "COMPLETED"
   };
+
+  const notificationMessage = 
+  {
+    fromName: "Airport Payment Service",
+    toEmail: email,
+    subject: "Payment successful",
+    body: `Payment for booking ${booking_id} was successful.`
+  }
 
   try {
     await db.query(
@@ -157,7 +172,7 @@ const successRedirect = async (req, res) => {
   }
 
   try {
-    await sendNotification(paymentStatus);
+    await sendNotification(notificationMessage);
     res.status(200).json(paymentStatus);
   } catch (error) {
     console.error("Failed to send RabbitMQ notification:", error.message);
@@ -166,11 +181,27 @@ const successRedirect = async (req, res) => {
 };
 
 const cancelRedirect = async (req, res) => {
+    
+  // stripe's cancel url don't have access to session id like success url, can only be retrieved via webhook.
+  // Therefore it is set to empty for now, since webhook is time consuming to test with. 
+  const email = "";
+  
+  // With webhook, this would not be in url but retrieved from session metadata, for better security. 
+  const booking_id = req.query.booking_id; 
+  
   const paymentStatus = {
-    booking_id: req.params.booking_id,
+    booking_id: booking_id,
     isPaid: false,
     status: "PENDING"
   };
+  
+  const notificationMessage = 
+  {
+    fromName: "Airport Payment Service",
+    toEmail: email,
+    subject: "Payment not completed",
+    body: `Payment for booking ${booking_id} was not successful.`
+  }
 
   try {
   await db.query(
@@ -186,7 +217,7 @@ const cancelRedirect = async (req, res) => {
   }
 
   try {
-    await sendNotification(paymentStatus);
+    await sendNotification(notificationMessage);
     res.status(200).json(paymentStatus);
   } catch (error) {
     console.error("Failed to send RabbitMQ notification:", error.message);
