@@ -8,10 +8,6 @@ module.exports = {
       await stripeService.stripeCheckout(req, res);
     },
 
-    payment: async (req, res) => {
-      await stripeService.stripePayment(req, res);
-    },
-
     success: async (req, res) => {
       await stripeService.successRedirect(req, res);
     },
@@ -19,6 +15,15 @@ module.exports = {
     cancel: async (req, res) => {
       await stripeService.cancelRedirect(req, res);
     },
+
+    getPaymentsByUserId: async (req, res) => {
+      await stripeService.getPaymentsByUserId(req, res);
+    },
+
+    getPaymentByBookingId: async (req, res) => {
+      await stripeService.getPaymentByBookingId(req, res);
+    },
+
     webhook: async (req, res) => {
       await stripeWebhookService.handleStripeWebhookRequest(req, res);
     }

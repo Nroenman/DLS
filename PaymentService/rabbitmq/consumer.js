@@ -3,7 +3,7 @@ const { connectRabbitMQ } = require("./connections");
 const startConsumers = async () => {
   const channel = await connectRabbitMQ();
 
-  const queueName = "payment_status_queue";
+  const queueName = "payment_queue";
 
   await channel.assertQueue(queueName, {
     durable: true
