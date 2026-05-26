@@ -10,7 +10,6 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Flight> Flights => Set<Flight>();
     public DbSet<Gate> Gates => Set<Gate>();
-    // public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<FlightFollow> FlightFollows => Set<FlightFollow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -58,23 +57,8 @@ public class AppDbContext : DbContext
              .IsRequired(false);
         });
 
+<<<<<<< HEAD
         // ── Booking ───────────────────────────────────────────────────────────
-        // modelBuilder.Entity<Booking>(e =>
-        // {
-        //     e.HasKey(b => b.Id);
-        //     e.HasIndex(b => new { b.UserId, b.FlightId }).IsUnique();
-
-        //     e.HasOne(b => b.User)
-        //      .WithMany(u => u.Bookings)
-        //      .HasForeignKey(b => b.UserId)
-        //      .OnDelete(DeleteBehavior.Cascade);
-
-        //     e.HasOne(b => b.Flight)
-        //      .WithMany(f => f.Bookings)
-        //      .HasForeignKey(b => b.FlightId)
-        //      .OnDelete(DeleteBehavior.Cascade);
-        // });
-
         // ── FlightFollow ──────────────────────────────────────────────────────
         modelBuilder.Entity<FlightFollow>(e =>
         {

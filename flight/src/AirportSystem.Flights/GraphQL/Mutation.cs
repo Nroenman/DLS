@@ -1,5 +1,4 @@
 using AirportSystem.Flights.Extensions;
-using AirportSystem.Flights.GraphQL.Inputs.Auth;
 using AirportSystem.Flights.GraphQL.Inputs.Flights;
 using AirportSystem.Flights.GraphQL.Inputs.Gates;
 using AirportSystem.Flights.GraphQL.Payloads;
@@ -13,37 +12,6 @@ namespace AirportSystem.Flights.GraphQL;
 
 public class Mutation
 {
-    // ── Auth ──────────────────────────────────────────────────────────────────
-
-    [GraphQLDescription(
-        "Register a new user account. Keycloak creates the user and assigns the requested role.")]
-    public async Task<AuthPayload> Register(
-        RegisterInput input,
-        [Service] IKeycloakService keycloakService)
-    {
-        var tokenResponse = await keycloakService.RegisterAsync(
-            input.Username, input.Email, input.Password, input.Role);
-
-        return new AuthPayload(
-            tokenResponse.AccessToken,
-            tokenResponse.RefreshToken,
-            tokenResponse.ExpiresIn);
-    }
-
-    [GraphQLDescription(
-        "Log in with email and password. Returns a Keycloak JWT to use as Bearer token.")]
-    public async Task<AuthPayload> Login(
-        LoginInput input,
-        [Service] IKeycloakService keycloakService)
-    {
-        var tokenResponse = await keycloakService.LoginAsync(input.Email, input.Password);
-
-        return new AuthPayload(
-            tokenResponse.AccessToken,
-            tokenResponse.RefreshToken,
-            tokenResponse.ExpiresIn);
-    }
-
     // ── Flights ───────────────────────────────────────────────────────────────
 
     [Authorize(Roles = new[] { "Admin", "Staff" })]

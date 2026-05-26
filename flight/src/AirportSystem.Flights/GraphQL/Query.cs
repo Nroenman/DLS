@@ -1,10 +1,9 @@
-using AirportSystem.Flights.Data;
 using AirportSystem.Flights.Extensions;
 using AirportSystem.Flights.Models;
+using AirportSystem.Flights.Services.Auth;
 using AirportSystem.Flights.Services.Flights;
 using AirportSystem.Flights.Services.Gates;
 using HotChocolate.Authorization;
-using Microsoft.EntityFrameworkCore;
 
 namespace AirportSystem.Flights.GraphQL;
 
@@ -51,28 +50,12 @@ public class Query
         [Service] IGateService gateService)
         => await gateService.GetGateByIdAsync(id);
 
-    // ── Users (Admin only) ────────────────────────────────────────────────────
-
-    [Authorize(Roles = new[] { "Admin" })]
-    [GraphQLDescription("(Admin) Retrieve all registered users.")]
-    [UseFiltering]
-    [UseSorting]
-    public IQueryable<User> GetUsers([Service] AppDbContext db)
-        => db.Users;
-
-    [Authorize(Roles = new[] { "Admin" })]
-    [GraphQLDescription("(Admin) Retrieve a specific user by ID.")]
-    public async Task<User?> GetUser(Guid id, [Service] AppDbContext db)
-        => await db.Users.FindAsync(id);
+    // ── Current user ──────────────────────────────────────────────────────────
 
     [Authorize]
     [GraphQLDescription("Retrieve the currently authenticated user's profile.")]
     public async Task<User> GetMe(
-        [Service] AppDbContext db,
+        [Service] IUserSyncService userSync,
         [Service] IHttpContextAccessor httpContextAccessor)
-    {
-        var userId = httpContextAccessor.HttpContext!.User.GetUserId();
-        return await db.Users.FindAsync(userId)
-            ?? throw new UnauthorizedAccessException("User not found.");
-    }
+        => await userSync.SyncAsync(httpContextAccessor.HttpContext!.User);
 }
