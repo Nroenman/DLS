@@ -5,6 +5,7 @@ using AirportSystem.Flights.GraphQL.Payloads;
 using AirportSystem.Flights.Services.Auth;
 using AirportSystem.Flights.Services.Flights;
 using AirportSystem.Flights.Services.Gates;
+using AirportSystem.Flights.Services.Messaging;
 using HotChocolate.Authorization;
 using HotChocolate.Subscriptions;
 
@@ -115,11 +116,13 @@ public class Mutation
         AssignGateInput input,
         [Service] IGateService gateService,
         [Service] IFlightService flightService,
-        [Service] ITopicEventSender eventSender)
+        [Service] ITopicEventSender eventSender,
+        [Service] IFlightEventPublisher eventPublisher)
     {
         var gate = await gateService.AssignFlightToGateAsync(input.GateId, input.FlightId);
         var flight = await flightService.GetFlightByIdAsync(input.FlightId);
         await eventSender.SendAsync(nameof(Subscription.OnAnyFlightUpdated), flight);
+        eventPublisher.PublishFlightUpdated(flight);
         return new GatePayload(gate);
     }
 
@@ -129,11 +132,13 @@ public class Mutation
         ReleaseGateInput input,
         [Service] IGateService gateService,
         [Service] IFlightService flightService,
-        [Service] ITopicEventSender eventSender)
+        [Service] ITopicEventSender eventSender,
+        [Service] IFlightEventPublisher eventPublisher)
     {
         var gate = await gateService.ReleaseGateFromFlightAsync(input.FlightId);
         var flight = await flightService.GetFlightByIdAsync(input.FlightId);
         await eventSender.SendAsync(nameof(Subscription.OnAnyFlightUpdated), flight);
+        eventPublisher.PublishFlightUpdated(flight);
         return new GatePayload(gate);
     }
 }
