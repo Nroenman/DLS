@@ -14,6 +14,17 @@ var realm        = builder.Configuration["Keycloak:Realm"]!;
 // rejected here before reaching any downstream service.
 // Requests with no token pass through unchanged — downstream services
 // enforce their own field-level authorization rules.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendCors", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5500")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -55,6 +66,8 @@ builder.Services
 
 var app = builder.Build();
 
+app.UseCors("FrontendCors");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -87,7 +100,7 @@ app.Use(async (context, next) =>
                             .Select(r => r.GetString())
                             .Where(r => r is not null)
                             .ToArray()!;
-                }
+                    }
                 catch (JsonException) { }
             }
 

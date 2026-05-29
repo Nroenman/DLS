@@ -48,11 +48,12 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/airport_system
       KC_DB_USERNAME: postgres
       KC_DB_PASSWORD: postgres
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_SECRET: ${GOOGLE_SECRET}
     ports:
       - "8080:8080"
     volumes:
       - ./keycloak/airport-realm.json:/opt/keycloak/data/import/airport-realm.json:ro
-
 
   # ── Services ──────────────────────────────────────────────────────────────────
 

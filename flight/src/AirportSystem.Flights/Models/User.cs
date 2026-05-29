@@ -16,6 +16,6 @@ public class User
     public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
-    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    // public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public ICollection<FlightFollow> FollowedFlights { get; set; } = new List<FlightFollow>();
 }

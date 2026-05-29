@@ -13,14 +13,24 @@ const sendNotification = async (notification) => {
 const stripeCheckout = async (req, res) => {
   console.log("Received checkout request with body:", req.body);
 
-  // Validate input start -- 
-  const { booking_id, user_id, amount, currency, userEmail } = req.body;
+  const {
+    BookingId,
+    UserId,
+    TotalPrice,
+    ContactEmail
+  } = req.body;
 
-  if (!booking_id || !user_id || !amount || !currency) {
-    return res.status(400).json({
-      error: "All fields are required"
-    });
-  }
+const booking_id = BookingId;
+const user_id = UserId;
+const amount = Math.round(Number(TotalPrice) * 100);
+const currency = "dkk";
+const userEmail = ContactEmail;
+
+if (!booking_id || !user_id || !TotalPrice || Number.isNaN(amount)) {
+  return res.status(400).json({
+    error: "BookingId, UserId and TotalPrice are required"
+  });
+}
   // Validate input end -- 
   
   // For idempotency 
@@ -89,11 +99,11 @@ const stripeCheckout = async (req, res) => {
         success_url: `http://localhost:3001/api/payment/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `http://localhost:3001/api/payment/stripe/cancel?booking_id=${booking_id}`,
 
-        metadata: {
-          booking_id: String(booking_id),
-          user_id: String(user_id),
-          userEmail: userEmail
-        }
+    metadata: {
+  booking_id: String(booking_id),
+  user_id: String(user_id),
+  userEmail: userEmail || ""
+}
       },
       {
         idempotencyKey
@@ -225,8 +235,73 @@ const cancelRedirect = async (req, res) => {
   }
 };
 
+const getPaymentsByUserId = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const [payments] = await db.query(
+      `SELECT 
+          id,
+          booking_id,
+          user_id,
+          amount,
+          currency,
+          status,
+          stripe_session_id,
+          created_at,
+          updated_at
+       FROM payments
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    return res.status(200).json(payments);
+  } catch (error) {
+    console.error("Failed to get payments by user:", error.message);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+const getPaymentByBookingId = async (req, res) => {
+  const { bookingId } = req.params;
+
+  try {
+    const [payments] = await db.query(
+      `SELECT 
+          id,
+          booking_id,
+          user_id,
+          amount,
+          currency,
+          status,
+          stripe_session_id,
+          created_at,
+          updated_at
+       FROM payments
+       WHERE booking_id = ?
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [bookingId]
+    );
+
+    if (payments.length === 0) {
+      return res.status(404).json({
+        error: "Payment not found"
+      });
+    }
+
+    return res.status(200).json(payments[0]);
+  } catch (error) {
+    console.error("Failed to get payment by booking:", error.message);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   stripeCheckout,
   successRedirect,
-  cancelRedirect
+  cancelRedirect,
+  getPaymentsByUserId,
+  getPaymentByBookingId
 };

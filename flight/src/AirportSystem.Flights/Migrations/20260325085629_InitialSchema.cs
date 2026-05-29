@@ -74,32 +74,32 @@ namespace AirportSystem.Flights.Migrations
                         onDelete: ReferentialAction.SetNull);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "Bookings",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    FlightId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SeatNumber = table.Column<string>(type: "text", nullable: true),
-                    BookedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Bookings", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Bookings_Flights_FlightId",
-                        column: x => x.FlightId,
-                        principalTable: "Flights",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Bookings_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            // migrationBuilder.CreateTable(
+            //     name: "Bookings",
+            //     columns: table => new
+            //     {
+            //         Id = table.Column<Guid>(type: "uuid", nullable: false),
+            //         UserId = table.Column<Guid>(type: "uuid", nullable: false),
+            //         FlightId = table.Column<Guid>(type: "uuid", nullable: false),
+            //         SeatNumber = table.Column<string>(type: "text", nullable: true),
+            //         BookedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+            //     },
+            //     constraints: table =>
+            //     {
+            //         table.PrimaryKey("PK_Bookings", x => x.Id);
+            //         table.ForeignKey(
+            //             name: "FK_Bookings_Flights_FlightId",
+            //             column: x => x.FlightId,
+            //             principalTable: "Flights",
+            //             principalColumn: "Id",
+            //             onDelete: ReferentialAction.Cascade);
+            //         table.ForeignKey(
+            //             name: "FK_Bookings_Users_UserId",
+            //             column: x => x.UserId,
+            //             principalTable: "Users",
+            //             principalColumn: "Id",
+            //             onDelete: ReferentialAction.Cascade);
+            //     });
 
             migrationBuilder.CreateTable(
                 name: "FlightFollows",
@@ -127,16 +127,16 @@ namespace AirportSystem.Flights.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Bookings_FlightId",
-                table: "Bookings",
-                column: "FlightId");
+            // migrationBuilder.CreateIndex(
+            //     name: "IX_Bookings_FlightId",
+            //     table: "Bookings",
+            //     column: "FlightId");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Bookings_UserId_FlightId",
-                table: "Bookings",
-                columns: new[] { "UserId", "FlightId" },
-                unique: true);
+            // migrationBuilder.CreateIndex(
+            //     name: "IX_Bookings_UserId_FlightId",
+            //     table: "Bookings",
+            //     columns: new[] { "UserId", "FlightId" },
+            //     unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_FlightFollows_FlightId",
@@ -181,8 +181,8 @@ namespace AirportSystem.Flights.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Bookings");
+            // migrationBuilder.DropTable(
+            //     name: "Bookings");
 
             migrationBuilder.DropTable(
                 name: "FlightFollows");

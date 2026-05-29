@@ -13,20 +13,20 @@ public class BookingService : IBookingService
     private readonly IPricingRepository _pricingRepository;
     private readonly IBookingValidator _bookingValidator;
     private readonly IBookingEventPublisher _bookingEventPublisher;
-    
+
     public BookingService(
         IBookingReadRepository bookingReadRepository,
         IBookingWriteRepository bookingWriteRepository,
         IPricingRepository pricingRepository,
         IBookingValidator bookingValidator,
         IBookingEventPublisher bookingEventPublisher)
-        {
+    {
         _bookingReadRepository = bookingReadRepository;
         _bookingWriteRepository = bookingWriteRepository;
         _pricingRepository = pricingRepository;
         _bookingValidator = bookingValidator;
         _bookingEventPublisher = bookingEventPublisher;
-        }
+    }
 
     public async Task<BookingResponse> CreateBookingAsync(CreateBookingRequest request, string userId)
     {
@@ -35,7 +35,7 @@ public class BookingService : IBookingService
         _bookingValidator.ValidatePassengerDetails(request.Passengers);
         _bookingValidator.ValidateFlightInfo(request);
         _bookingValidator.ValidateBookingDetails(request);
-        
+
         var booking = new Booking
         {
             Id = Guid.NewGuid(),
@@ -63,7 +63,7 @@ public class BookingService : IBookingService
             IsLeadPassenger = p.IsLeadPassenger,
             HasExtraBaggage = p.HasExtraBaggage
         }).ToList();
-        
+
         booking.Passengers = passengers;
         var pricing = await _pricingRepository.GetPricingAsync();
         if (pricing == null)
@@ -73,7 +73,7 @@ public class BookingService : IBookingService
         {
             var price = request.TicketPrice;
             var age = DateTime.Today.Year - p.DateOfBirth.Year;
-            
+
             if (p.DateOfBirth.Date > DateTime.Today.AddYears(-age))
                 age--;
 
@@ -82,20 +82,34 @@ public class BookingService : IBookingService
                 var discount = request.TicketPrice * pricing.ChildDiscount;
                 price = request.TicketPrice - discount;
             }
-            
+
             if (p.HasExtraBaggage)
                 price += pricing.ExtraBaggageFee;
 
             return price;
         });
         await _bookingWriteRepository.AddAsync(booking);
-        
+
+        var paymentMessage = new PaymentMessage
+        {
+            BookingId = booking.Id,
+            UserId = userId,
+            TotalPrice = booking.TotalPrice,
+            ContactEmail = request.ContactEmail,
+            ContactPhone = request.ContactPhone
+        };
+
+        await _bookingEventPublisher.PublishPaymentMessage(paymentMessage);
+
         var notificationMessage = new NotificationMessage
         {
             FromName = "Airport Booking Service",
             ToEmail = request.ContactEmail,
-            Subject = "Booking Confirmation",
-            Body = $"<h2>Booking Confirmed</h2><p>Your booking with ID {booking.Id} has been created successfully. Total price: {booking.TotalPrice}</p>"
+            Subject = "Booking Created",
+            Body =
+                $"<h2>Booking Created</h2>" +
+                $"<p>Your booking with ID {booking.Id} has been created successfully.</p>" +
+                $"<p>Total price: {booking.TotalPrice} DKK</p>"
         };
 
         await _bookingEventPublisher.PublishNotificationMessage(notificationMessage);
@@ -119,7 +133,7 @@ public class BookingService : IBookingService
                 HasExtraBaggage = p.HasExtraBaggage
             }).ToList()
         };
-        
+
         return response;
     }
 
@@ -154,10 +168,10 @@ public class BookingService : IBookingService
     public async Task<List<BookingResponse>> GetBookingsByUserIdAsync(string userId)
     {
         _bookingValidator.ValidateGetBookingsByUserId(userId);
-        
-        var booking = await  _bookingReadRepository.GetByUserIdAsync(userId);
-        
-        var responses = booking.Select(b => new BookingResponse()
+
+        var bookings = await _bookingReadRepository.GetByUserIdAsync(userId);
+
+        var responses = bookings.Select(b => new BookingResponse()
         {
             BookingId = b.Id,
             Status = b.Status,
@@ -176,6 +190,7 @@ public class BookingService : IBookingService
                 HasExtraBaggage = p.HasExtraBaggage
             }).ToList()
         }).ToList();
+
         return responses;
     }
 
