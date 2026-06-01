@@ -183,7 +183,7 @@ const successRedirect = async (req, res) => {
 
   try {
     await sendNotification(notificationMessage);
-    res.status(200).json(paymentStatus);
+    res.redirect(`http://localhost:5500/pages/confirmation.html`);
   } catch (error) {
     console.error("Failed to send RabbitMQ notification:", error.message);
     res.status(500).json({ error: error.message });
@@ -228,7 +228,7 @@ const cancelRedirect = async (req, res) => {
 
   try {
     await sendNotification(notificationMessage);
-    res.status(200).json(paymentStatus);
+    res.redirect(`http://localhost:5500/pages/payment-failed.html`);
   } catch (error) {
     console.error("Failed to send RabbitMQ notification:", error.message);
     res.status(500).json({ error: error.message });

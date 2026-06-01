@@ -13,7 +13,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IBaggageService, BaggageService>();
-builder.Services.AddSingleton<RabbitMqService>();
+// builder.Services.AddSingleton<RabbitMqService>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",

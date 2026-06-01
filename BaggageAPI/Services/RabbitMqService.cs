@@ -11,12 +11,13 @@ public class RabbitMqService : IDisposable
 
     public RabbitMqService(IConfiguration config)
     {
-        var factory = new ConnectionFactory
-        {
-            HostName = config["RabbitMQ__Host"] ?? "localhost",
-            UserName = config["RabbitMQ__User"] ?? "guest",
-            Password = config["RabbitMQ__Pass"] ?? "guest"
-        };
+      var factory = new ConnectionFactory
+{
+    HostName = config["RabbitMQ__Host"] ?? "localhost",
+    Port = int.Parse(config["RabbitMQ__Port"] ?? "5672"),
+    UserName = config["RabbitMQ__Username"] ?? "guest",
+    Password = config["RabbitMQ__Password"] ?? "guest"
+};
 
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
