@@ -4,7 +4,7 @@ Runs the full Airport System on a local minikube cluster — a close mirror of t
 
 | Namespace | Services |
 |---|---|
-| `airport` | postgres, rabbitmq, keycloak, flight, booking, notification, gateway |
+| `airport` | postgres, rabbitmq, keycloak, flight, booking, notification, payment, gateway |
 | `baggage` | postgres, rabbitmq, baggage-api |
 
 ---

@@ -20,6 +20,7 @@ docker build -t airport/gateway:local   "$PROJECT_ROOT/gateway"
 docker build -t airport/booking:local   "$PROJECT_ROOT/BookingService"
 docker build -t airport/notification:local "$PROJECT_ROOT/NotificationService"
 docker build -t airport/baggage:local   "$PROJECT_ROOT/BaggageAPI"
+docker build -t airport/payment:local   "$PROJECT_ROOT/PaymentService"
 
 # ── 3. Enable minikube addons ────────────────────────────────────────────────
 echo "==> Enabling metrics-server..."
@@ -54,6 +55,7 @@ kubectl apply -f "$SCRIPT_DIR/keycloak/"
 kubectl apply -f "$SCRIPT_DIR/flight/"
 kubectl apply -f "$SCRIPT_DIR/booking/"
 kubectl apply -f "$SCRIPT_DIR/notification/"
+kubectl apply -f "$SCRIPT_DIR/payment/"
 kubectl apply -f "$SCRIPT_DIR/gateway/"
 
 # ── 8. Deploy baggage namespace ──────────────────────────────────────────────

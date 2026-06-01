@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+  namespace: airport
+spec:
+  selector:
+    app: payment
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
