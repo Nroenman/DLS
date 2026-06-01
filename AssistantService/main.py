@@ -32,8 +32,8 @@ FLIGHTS_QUERY = """
 }
 """
 
-SYSTEM_PROMPT = """You are a helpful airport assistant. Answer passenger questions \
-about flights, gates, and departure/arrival times using only the flight data below. \
+SYSTEM_PROMPT = """You are a helpful airport assistant. Answer passenger questions
+about flights, gates, and departure/arrival times using only the flight data below.
 Be concise and friendly. If a specific flight cannot be found in the data, say so clearly.
 
 Current flight data:
