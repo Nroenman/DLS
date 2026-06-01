@@ -65,11 +65,6 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=airport_system;Username=postgres;Password=postgres"
-      Keycloak__BaseUrl: "http://keycloak:8080"
-      Keycloak__Realm: "airport-system"
-      Keycloak__ClientId: "airport-api"
-      Keycloak__ClientSecret: "airport-api-secret"
-      Keycloak__FrontendClientId: "airport-frontend"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Port: "5672"
       RabbitMQ__Username: "guest"
@@ -77,8 +72,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      keycloak:
-        condition: service_started
       rabbitmq:
         condition: service_healthy
 
@@ -143,5 +136,60 @@ services:
       - flight
       - keycloak
 
+  # Baggage runs against its own database, mirroring its isolated k8s namespace.
+  baggage-postgres:
+    image: postgres:16-alpine
+    container_name: airport_baggage_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: baggage_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - baggage_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  baggage:
+    build:
+      context: ./BaggageAPI
+      dockerfile: dockerfile
+    container_name: airport_baggage
+    restart: unless-stopped
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=baggage-postgres;Port=5432;Database=baggage_db;Username=postgres;Password=postgres"
+      RabbitMQ__Host: "rabbitmq"
+    depends_on:
+      baggage-postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  payment:
+    build:
+      context: ./PaymentService
+      dockerfile: Dockerfile
+    container_name: airport_payment
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
+      # Dummy key so the Stripe client constructs; replace to exercise real payments.
+      STRIPE_SECRET_KEY: "sk_test_dummy"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  baggage_postgres_data:
