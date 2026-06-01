@@ -21,6 +21,10 @@ docker build -t airport/booking:local   "$PROJECT_ROOT/BookingService"
 docker build -t airport/notification:local "$PROJECT_ROOT/NotificationService"
 docker build -t airport/baggage:local   "$PROJECT_ROOT/BaggageAPI"
 docker build -t airport/payment:local   "$PROJECT_ROOT/PaymentService"
+docker build -t airport/assistant:local "$PROJECT_ROOT/AssistantService"
+
+# Pull Ollama into minikube's daemon so the cluster can run it offline.
+docker pull ollama/ollama:latest
 
 # ── 3. Enable minikube addons ────────────────────────────────────────────────
 echo "==> Enabling metrics-server..."
@@ -56,6 +60,8 @@ kubectl apply -f "$SCRIPT_DIR/flight/"
 kubectl apply -f "$SCRIPT_DIR/booking/"
 kubectl apply -f "$SCRIPT_DIR/notification/"
 kubectl apply -f "$SCRIPT_DIR/payment/"
+kubectl apply -f "$SCRIPT_DIR/ollama/"
+kubectl apply -f "$SCRIPT_DIR/assistant/"
 kubectl apply -f "$SCRIPT_DIR/gateway/"
 
 # ── 8. Deploy baggage namespace ──────────────────────────────────────────────
@@ -67,6 +73,7 @@ MINIKUBE_IP=$(minikube ip)
 echo ""
 echo "==> All resources applied. Access points:"
 echo "    Gateway (API):        http://$MINIKUBE_IP:30500"
+echo "    Assistant chat:       http://$MINIKUBE_IP:30500/assistant/chat  (POST)"
 echo "    Keycloak admin:       http://$MINIKUBE_IP:30880  (admin / admin)"
 echo "    RabbitMQ management:  http://$MINIKUBE_IP:30672  (guest / guest)"
 echo "    Baggage API:          http://$MINIKUBE_IP:30501"

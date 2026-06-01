@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assistant
+  namespace: airport
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: assistant
+  template:
+    metadata:
+      labels:
+        app: assistant
+    spec:
+      initContainers:
+        - name: wait-for-ollama
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z ollama 11434; do echo "waiting for ollama..."; sleep 5; done']
+        - name: wait-for-flight
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z flight 8080; do echo "waiting for flight..."; sleep 2; done']
+      containers:
+        - name: assistant
+          image: airport/assistant:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: OLLAMA_URL
+              value: "http://ollama:11434"
+            - name: OLLAMA_MODEL
+              value: "qwen2.5:3b"
+            - name: FLIGHT_GRAPHQL_URL
+              value: "http://flight:8080/graphql"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /assistant/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /assistant/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
