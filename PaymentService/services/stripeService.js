@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const db = require("../database/mysql.js");
+const Payment = require("../models/Payment");
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -20,73 +20,58 @@ const stripeCheckout = async (req, res) => {
     ContactEmail
   } = req.body;
 
-const booking_id = BookingId;
-const user_id = UserId;
-const amount = Math.round(Number(TotalPrice) * 100);
-const currency = "dkk";
-const userEmail = ContactEmail;
+  const booking_id = BookingId;
+  const user_id = UserId;
+  const amount = Math.round(Number(TotalPrice) * 100);
+  const currency = "DKK";
+  const userEmail = ContactEmail;
 
-if (!booking_id || !user_id || !TotalPrice || Number.isNaN(amount)) {
-  return res.status(400).json({
-    error: "BookingId, UserId and TotalPrice are required"
-  });
-}
-  // Validate input end -- 
-  
-  // For idempotency 
+  if (!booking_id || !user_id || !TotalPrice || Number.isNaN(amount)) {
+    return res.status(400).json({
+      error: "BookingId, UserId and TotalPrice are required"
+    });
+  }
+
   const idempotencyKey = `checkout-${booking_id}`;
 
-  // Check if payment already exists for this booking start -- 
   try {
-    const [existingPayments] = await db.query(
-      `SELECT *
-       FROM payments
-       WHERE booking_id = ?
-       AND status = 'PENDING'
-       LIMIT 1`,
-      [booking_id]
-    );
+    const existingPayment = await Payment.findOne({
+      where: {
+        booking_id,
+        status: "PENDING"
+      }
+    });
 
-    if (existingPayments.length > 0) {
-     
-      const existingPayment = existingPayments[0];
-      console.log("Existing pending payment found: ", existingPayment);
-      
-      if (existingPayment.stripe_session_id) {
-        const existingSession = await stripe.checkout.sessions.retrieve(
-          existingPayment.stripe_session_id
-        );
+    if (existingPayment && existingPayment.stripe_session_id) {
+      console.log("Existing pending payment found:", existingPayment.toJSON());
 
-        console.log("Retrieved existing session: ", existingSession);
+      const existingSession = await stripe.checkout.sessions.retrieve(
+        existingPayment.stripe_session_id
+      );
 
-        if(existingSession.url == null) {
-          console.log("Existing session has expired.");
-          res.status(400).json({
-            error: "Existing payment session has expired. Please try again."
-          });
-          return;
-        }
+      console.log("Retrieved existing session:", existingSession.id);
 
-        return res.status(200).json({
-          url: existingSession.url,
-          reused: true
+      if (existingSession.url == null) {
+        return res.status(400).json({
+          error: "Existing payment session has expired. Please try again."
         });
       }
-    }
-    // Check if payment already exists for this booking end --
 
-    // Create Stripe Checkout Session start --
+      return res.status(200).json({
+        url: existingSession.url,
+        reused: true
+      });
+    }
+
     const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
-
-        // Optional, but useful for Stripe dashboard/reconciliation
         client_reference_id: String(booking_id),
 
         line_items: [
           {
             price_data: {
-              currency,
+              currency: currency.toLowerCase(),
               product_data: {
                 name: `Booking ${booking_id}`
               },
@@ -99,41 +84,42 @@ if (!booking_id || !user_id || !TotalPrice || Number.isNaN(amount)) {
         success_url: `http://localhost:3001/api/payment/stripe/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `http://localhost:3001/api/payment/stripe/cancel?booking_id=${booking_id}`,
 
-    metadata: {
-  booking_id: String(booking_id),
-  user_id: String(user_id),
-  userEmail: userEmail || ""
-}
+        metadata: {
+          booking_id: String(booking_id),
+          user_id: String(user_id),
+          userEmail: userEmail || ""
+        }
       },
       {
         idempotencyKey
       }
     );
-    // Create Stripe Checkout Session end --
 
-    // Save payment record with PENDING status start --
-    await db.query(
-      `INSERT INTO payments
-       (booking_id, user_id, idempotency_key, amount, currency, status, stripe_session_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         stripe_session_id = VALUES(stripe_session_id),
-         idempotency_key = VALUES(idempotency_key),
-         status = 'PENDING',
-         updated_at = CURRENT_TIMESTAMP`,
-      [
-        booking_id,
+    const existingByBooking = await Payment.findOne({
+      where: { booking_id }
+    });
+
+    if (existingByBooking) {
+      await existingByBooking.update({
         user_id,
-        idempotencyKey,
+        idempotency_key: idempotencyKey,
         amount,
         currency,
-        "PENDING", // Will start as PENDING and update to SUCCESS if successRedirect is called
-        session.id
-      ]
-    );
-    // Save payment record with PENDING status end --
+        status: "PENDING",
+        stripe_session_id: session.id
+      });
+    } else {
+      await Payment.create({
+        booking_id,
+        user_id,
+        idempotency_key: idempotencyKey,
+        amount,
+        currency,
+        status: "PENDING",
+        stripe_session_id: session.id
+      });
+    }
 
-    // Return the session URL to the client
     return res.status(200).json({
       url: session.url,
       reused: false
@@ -148,90 +134,95 @@ if (!booking_id || !user_id || !TotalPrice || Number.isNaN(amount)) {
 };
 
 const successRedirect = async (req, res) => {
-   
   const sessionId = req.query.session_id;
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
-  const email = session.metadata.userEmail;
-  const booking_id = session.metadata.booking_id;
-  
-  const paymentStatus = {
-    booking_id: booking_id,
-    isPaid: true,
-    status: "COMPLETED"
-  };
 
-  const notificationMessage = 
-  {
-    fromName: "Airport Payment Service",
-    toEmail: email,
-    subject: "Payment successful",
-    body: `Payment for booking ${booking_id} was successful.`
+  if (!sessionId) {
+    return res.status(400).json({
+      error: "session_id is required"
+    });
   }
 
   try {
-    await db.query(
-      `UPDATE payments
-       SET status = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE booking_id = ?`,
-      [paymentStatus.status, paymentStatus.booking_id]
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    const email = session.metadata.userEmail;
+    const booking_id = session.metadata.booking_id;
+
+    const paymentStatus = {
+      booking_id,
+      isPaid: true,
+      status: "COMPLETED"
+    };
+
+    const notificationMessage = {
+      fromName: "Airport Payment Service",
+      toEmail: email,
+      subject: "Payment successful",
+      body: `Payment for booking ${booking_id} was successful.`
+    };
+
+    await Payment.update(
+      {
+        status: paymentStatus.status
+      },
+      {
+        where: { booking_id }
+      }
     );
-  } catch (error) {
-    console.error("Failed to update payment status in database:", error.message);
-    return res.status(500).json({ error: error.message });
-  }
 
-  try {
     await sendNotification(notificationMessage);
-    res.status(200).json(paymentStatus);
+
+    return res.status(200).json(paymentStatus);
   } catch (error) {
-    console.error("Failed to send RabbitMQ notification:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("Payment success handling failed:", error.message);
+
+    return res.status(500).json({
+      error: error.message
+    });
   }
 };
 
 const cancelRedirect = async (req, res) => {
-    
-  // stripe's cancel url don't have access to session id like success url, can only be retrieved via webhook.
-  // Therefore it is set to empty for now, since webhook is time consuming to test with. 
-  const email = "";
-  
-  // With webhook, this would not be in url but retrieved from session metadata, for better security. 
-  const booking_id = req.query.booking_id; 
-  
+  const booking_id = req.query.booking_id;
+
+  if (!booking_id) {
+    return res.status(400).json({
+      error: "booking_id is required"
+    });
+  }
+
   const paymentStatus = {
-    booking_id: booking_id,
+    booking_id,
     isPaid: false,
     status: "PENDING"
   };
-  
-  const notificationMessage = 
-  {
+
+  const notificationMessage = {
     fromName: "Airport Payment Service",
-    toEmail: email,
+    toEmail: "",
     subject: "Payment not completed",
     body: `Payment for booking ${booking_id} was not successful.`
-  }
+  };
 
   try {
-  await db.query(
-    `UPDATE payments
-     SET status = ?,  
-          updated_at = CURRENT_TIMESTAMP
-      WHERE booking_id = ?`,
-    [paymentStatus.status, paymentStatus.booking_id]
+    await Payment.update(
+      {
+        status: paymentStatus.status
+      },
+      {
+        where: { booking_id }
+      }
     );
-  } catch (error) {
-    console.error("Failed to update payment status in database:", error.message);
-    return res.status(500).json({ error: error.message });
-  }
 
-  try {
     await sendNotification(notificationMessage);
-    res.status(200).json(paymentStatus);
+
+    return res.status(200).json(paymentStatus);
   } catch (error) {
-    console.error("Failed to send RabbitMQ notification:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("Payment cancel handling failed:", error.message);
+
+    return res.status(500).json({
+      error: error.message
+    });
   }
 };
 
@@ -239,27 +230,31 @@ const getPaymentsByUserId = async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const [payments] = await db.query(
-      `SELECT 
-          id,
-          booking_id,
-          user_id,
-          amount,
-          currency,
-          status,
-          stripe_session_id,
-          created_at,
-          updated_at
-       FROM payments
-       WHERE user_id = ?
-       ORDER BY created_at DESC`,
-      [userId]
-    );
+    const payments = await Payment.findAll({
+      where: {
+        user_id: userId
+      },
+      attributes: [
+        "id",
+        "booking_id",
+        "user_id",
+        "amount",
+        "currency",
+        "status",
+        "stripe_session_id",
+        "created_at",
+        "updated_at"
+      ],
+      order: [["created_at", "DESC"]]
+    });
 
     return res.status(200).json(payments);
   } catch (error) {
     console.error("Failed to get payments by user:", error.message);
-    return res.status(500).json({ error: error.message });
+
+    return res.status(500).json({
+      error: error.message
+    });
   }
 };
 
@@ -267,34 +262,37 @@ const getPaymentByBookingId = async (req, res) => {
   const { bookingId } = req.params;
 
   try {
-    const [payments] = await db.query(
-      `SELECT 
-          id,
-          booking_id,
-          user_id,
-          amount,
-          currency,
-          status,
-          stripe_session_id,
-          created_at,
-          updated_at
-       FROM payments
-       WHERE booking_id = ?
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [bookingId]
-    );
+    const payment = await Payment.findOne({
+      where: {
+        booking_id: bookingId
+      },
+      attributes: [
+        "id",
+        "booking_id",
+        "user_id",
+        "amount",
+        "currency",
+        "status",
+        "stripe_session_id",
+        "created_at",
+        "updated_at"
+      ],
+      order: [["created_at", "DESC"]]
+    });
 
-    if (payments.length === 0) {
+    if (!payment) {
       return res.status(404).json({
         error: "Payment not found"
       });
     }
 
-    return res.status(200).json(payments[0]);
+    return res.status(200).json(payment);
   } catch (error) {
     console.error("Failed to get payment by booking:", error.message);
-    return res.status(500).json({ error: error.message });
+
+    return res.status(500).json({
+      error: error.message
+    });
   }
 };
 

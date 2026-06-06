@@ -1,14 +1,13 @@
 /**
  * Stripe webhook service.
  *
- * Stripe sends events to this endpoint when something happens in Checkout.
- * This service handles:
+ * Handles:
  * - checkout.session.completed
  * - checkout.session.expired
  *
  * Idempotence:
  * - Stripe may send the same event more than once.
- * - Therefore, every processed event.id is stored in stripe_events.
+ * - Every processed event.id is stored in stripe_events.
  * - If the event.id already exists, the event is ignored.
  */
 
@@ -17,22 +16,19 @@ require("dotenv").config();
 const Stripe = require("stripe");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-const db = require("./../database/mysql.js");
+const Payment = require("../models/Payment");
+const StripeEvent = require("../models/StripeEvent");
 
 async function hasProcessedEvent(eventId) {
-  const [rows] = await db.query(
-    "SELECT event_id FROM stripe_events WHERE event_id = ?",
-    [eventId]
-  );
-
-  return rows.length > 0;
+  const existingEvent = await StripeEvent.findByPk(eventId);
+  return existingEvent !== null;
 }
 
 async function markEventAsProcessed(eventId, eventType) {
-  await db.query(
-    "INSERT INTO stripe_events (event_id, event_type) VALUES (?, ?)",
-    [eventId, eventType]
-  );
+  await StripeEvent.create({
+    event_id: eventId,
+    event_type: eventType
+  });
 }
 
 async function handleStripeWebhook(rawBody, signature) {
@@ -60,21 +56,18 @@ async function handleStripeWebhook(rawBody, signature) {
       const bookingId = session.metadata.booking_id;
       const userId = session.metadata.user_id;
 
-      await db.query(
-        `UPDATE payments
-         SET status = ?,
-             stripe_session_id = ?,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE booking_id = ?
-           AND user_id = ?
-           AND stripe_session_id = ?`,
-        [
-          "COMPLETED",
-          session.id,
-          bookingId,
-          userId,
-          session.id
-        ]
+      await Payment.update(
+        {
+          status: "COMPLETED",
+          stripe_session_id: session.id
+        },
+        {
+          where: {
+            booking_id: bookingId,
+            user_id: userId,
+            stripe_session_id: session.id
+          }
+        }
       );
 
       break;
@@ -86,21 +79,17 @@ async function handleStripeWebhook(rawBody, signature) {
       const bookingId = session.metadata.booking_id;
       const userId = session.metadata.user_id;
 
-      await db.query(
-        `UPDATE payments
-         SET status = ?,
-             stripe_session_id = ?,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE booking_id = ?
-           AND user_id = ?
-           AND stripe_session_id = ?`,
-        [
-          "CANCELLED",
-          session.id,
-          bookingId,
-          userId,
-          session.id
-        ]
+      await Payment.update(
+        {
+          status: "FAILED"
+        },
+        {
+          where: {
+            booking_id: bookingId,
+            user_id: userId,
+            stripe_session_id: session.id
+          }
+        }
       );
 
       break;
@@ -130,11 +119,11 @@ const handleStripeWebhookRequest = async (req, res) => {
 
     console.log("Stripe Webhook processed event:", result);
 
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     console.error("Error processing Stripe webhook:", err.message);
 
-    res.status(400).send(`Webhook Error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 };
 
