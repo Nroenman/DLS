@@ -30,11 +30,7 @@ public class BookingService : IBookingService
 
     public async Task<BookingResponse> CreateBookingAsync(CreateBookingRequest request, string userId)
     {
-        _bookingValidator.ValidatePassengerCount(request.Passengers);
-        _bookingValidator.ValidateLeadPassenger(request.Passengers);
-        _bookingValidator.ValidatePassengerDetails(request.Passengers);
-        _bookingValidator.ValidateFlightInfo(request);
-        _bookingValidator.ValidateBookingDetails(request);
+        _bookingValidator.ValidateCreateBooking(request);
 
         var booking = new Booking
         {

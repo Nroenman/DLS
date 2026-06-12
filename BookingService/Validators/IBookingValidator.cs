@@ -5,12 +5,8 @@ namespace BookingService.Validators;
 
 public interface IBookingValidator
 {
-    void ValidatePassengerCount(List<CreatePassengerRequest>? passengers);
-    void ValidateLeadPassenger(List<CreatePassengerRequest> passengers);
-    void ValidatePassengerDetails(List<CreatePassengerRequest> passengers);
-    void ValidateFlightInfo(CreateBookingRequest request);
-    void ValidateBookingDetails(CreateBookingRequest request);
+    void ValidateCreateBooking(CreateBookingRequest request);
     void ValidateGetBookingsByUserId(string userId);
     void ValidateUpdateBookingStatus(BookingStatus status);
-    void ValidateCancelBooking(Booking status, string userId);
+    void ValidateCancelBooking(Booking booking, string userId);
 }
