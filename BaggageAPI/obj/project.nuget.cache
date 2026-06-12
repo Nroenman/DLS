@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "XQ+lymtm1Zg=",
+  "dgSpecHash": "Gp4InEB+kvM=",
   "success": true,
-  "projectFilePath": "C:\\Users\\nikol\\Documents\\GitHub\\DLS\\BaggageAPI\\BaggageAPI.csproj",
+  "projectFilePath": "C:\\Users\\nikol\\RiderProjects\\DLS\\BaggageAPI\\BaggageAPI.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\nikol\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\nikol\\.nuget\\packages\\microsoft.build.framework\\18.0.2\\microsoft.build.framework.18.0.2.nupkg.sha512",
