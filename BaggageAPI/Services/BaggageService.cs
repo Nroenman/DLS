@@ -40,7 +40,7 @@ public class BaggageService(AppDbContext context, RabbitMqService rabbitMq) : IB
     {
         var baggage = await _context.Baggages.FindAsync(id);
 
-        if (baggage is null) return null; // ✅ Fix 4: null guard
+        if (baggage is null) return null; 
 
         baggage.Status = dto.Status;
         baggage.CurrentLocation = dto.Location;

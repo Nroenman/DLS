@@ -100,7 +100,25 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-
+  baggage:
+    build:
+      context: ./BaggageAPI
+      dockerfile: Dockerfile
+    container_name: airport_baggage
+    restart: unless-stopped
+    ports:
+      - "5003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=baggage_db;Username=postgres;Password=postgres"
+      RabbitMQ__Host: "rabbitmq"
+      RabbitMQ__User: "guest"
+      RabbitMQ__Pass: "guest"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
   booking:
     build:
       context: ./BookingService

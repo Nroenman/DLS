@@ -12,4 +12,4 @@ public class Baggage
     public string CurrentLocation { get; set; }
 
     public DateTime CreatedAt { get; set; }
-}
+} 

@@ -35,7 +35,7 @@ public class RabbitMqService : IDisposable
         var body = Encoding.UTF8.GetBytes(json);
 
         var properties = _channel.CreateBasicProperties();
-        properties.Persistent = true; // 👈 messages survive a RabbitMQ restart
+        properties.Persistent = true; 
 
         _channel.BasicPublish(
             exchange: "",
