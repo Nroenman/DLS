@@ -66,6 +66,12 @@ services:
       - "8080:8080"
     volumes:
       - ./keycloak/airport-realm.json:/opt/keycloak/data/import/airport-realm.json:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '\"status\": \"UP\"'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
 
   # ── Services ──────────────────────────────────────────────────────────────────
 
@@ -91,7 +97,7 @@ services:
       postgres:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -121,7 +127,7 @@ services:
       rabbitmq:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
 
   notification:
     build:
@@ -177,8 +183,10 @@ services:
       Keycloak__BaseUrl: "http://keycloak:8080"
       Keycloak__Realm: "airport-system"
     depends_on:
-      - flight
-      - keycloak
+      flight:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
 
 volumes:
   postgres_data:
