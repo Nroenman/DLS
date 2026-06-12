@@ -22,8 +22,7 @@ public class RabbitMqService : IDisposable
         _channel = _connection.CreateModel();
     }
 
-    public void Publish(string queueName, object message)
-    {
+public virtual void Publish(string queueName, object message)    {
         _channel.QueueDeclare(
             queue: queueName,
             durable: true,
