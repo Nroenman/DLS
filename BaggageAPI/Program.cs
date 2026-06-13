@@ -2,7 +2,7 @@ using BaggageAPI.Data;
 using BaggageAPI.Interfaces;
 using BaggageAPI.Services;
 using Microsoft.EntityFrameworkCore;
-
+using Asp.Versioning;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -21,6 +21,14 @@ builder.Services.AddCors(options =>
             .AllowAnyOrigin()
             .AllowAnyHeader()
             .AllowAnyMethod());
+});
+
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true; 
 });
 var app = builder.Build();
 

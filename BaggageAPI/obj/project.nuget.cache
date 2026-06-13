@@ -1,9 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "Gp4InEB+kvM=",
+  "dgSpecHash": "4Mz77BwVG08=",
   "success": true,
   "projectFilePath": "C:\\Users\\nikol\\RiderProjects\\DLS\\BaggageAPI\\BaggageAPI.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\nikol\\.nuget\\packages\\asp.versioning.abstractions\\10.0.0\\asp.versioning.abstractions.10.0.0.nupkg.sha512",
+    "C:\\Users\\nikol\\.nuget\\packages\\asp.versioning.http\\10.0.0\\asp.versioning.http.10.0.0.nupkg.sha512",
+    "C:\\Users\\nikol\\.nuget\\packages\\asp.versioning.mvc\\10.0.0\\asp.versioning.mvc.10.0.0.nupkg.sha512",
     "C:\\Users\\nikol\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\nikol\\.nuget\\packages\\microsoft.build.framework\\18.0.2\\microsoft.build.framework.18.0.2.nupkg.sha512",
     "C:\\Users\\nikol\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.11.0\\microsoft.codeanalysis.analyzers.3.11.0.nupkg.sha512",
