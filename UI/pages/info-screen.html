@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flight Information Board</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #080c18;
+      color: #f0e8c0;
+      font-family: 'Courier New', 'Lucida Console', monospace;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .board-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      background: #0d1224;
+      border-bottom: 2px solid #f0c030;
+    }
+    .board-header .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #f0c030;
+      text-transform: uppercase;
+      text-decoration: none;
+    }
+    .board-header .logo span { font-size: 28px; }
+    .clock {
+      font-size: 36px;
+      font-weight: 700;
+      color: #f0c030;
+      letter-spacing: 4px;
+    }
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: #aaa;
+      letter-spacing: 1px;
+    }
+    .live-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: pulse 1.4s infinite;
+    }
+    .live-dot.connected { background: #22c55e; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── Board sections ── */
+    .board-section { padding: 28px 32px; }
+    .board-section + .board-section { border-top: 1px solid #1e2540; }
+
+    .section-title {
+      font-size: 13px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: #f0c030;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #f0c030;
+      opacity: .25;
+    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+    thead tr {
+      color: #888;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #1e2540;
+    }
+    thead th { padding: 6px 10px; font-weight: 400; text-align: left; }
+    tbody tr {
+      border-bottom: 1px solid #10152a;
+      transition: background .2s;
+    }
+    tbody tr:hover { background: #0d1530; }
+    tbody td { padding: 10px 10px; vertical-align: middle; }
+
+    .col-time    { width: 80px; }
+    .col-flight  { width: 100px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+    .col-airline { width: 180px; color: #ccc; }
+    .col-route   { flex: 1; }
+    .col-gate    { width: 90px; }
+    .col-status  { width: 130px; }
+
+    .time-actual { color: #f59e0b; }
+
+    /* ── Status badges ── */
+    .status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 3px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .status-scheduled  { background: #1e2540; color: #aab; }
+    .status-boarding   { background: #14532d; color: #4ade80; }
+    .status-departed   { background: #111827; color: #6b7280; }
+    .status-arrived    { background: #111827; color: #6b7280; }
+    .status-delayed    { background: #451a03; color: #fbbf24; }
+    .status-cancelled  { background: #450a0a; color: #f87171; }
+
+    .gate-label {
+      background: #1e2540;
+      color: #93c5fd;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+    .gate-tbd { color: #555; font-size: 13px; }
+
+    /* ── Flash animation on live update ── */
+    @keyframes rowflash {
+      0%   { background: #f0c03018; }
+      100% { background: transparent; }
+    }
+    .flash { animation: rowflash .8s ease-out; }
+
+    /* ── Empty state ── */
+    .empty-row td {
+      text-align: center;
+      color: #444;
+      padding: 28px;
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+
+    /* ── Nav back link ── */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #888;
+      font-size: 13px;
+      text-decoration: none;
+      letter-spacing: 1px;
+    }
+    .back-link:hover { color: #f0c030; }
+  </style>
+</head>
+<body>
+
+<header class="board-header">
+  <a class="logo" href="../index.html">
+    <span>&#9992;</span> Airport Information
+  </a>
+  <div class="clock" id="clock">--:--:--</div>
+  <div class="live-badge">
+    <div class="live-dot" id="liveDot"></div>
+    <span id="liveLabel">Connecting…</span>
+  </div>
+</header>
+
+<section class="board-section">
+  <div class="section-title">&#8599; Departures</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-time">Time</th>
+        <th class="col-flight">Flight</th>
+        <th class="col-airline">Airline</th>
+        <th class="col-route">Destination</th>
+        <th class="col-gate">Gate</th>
+        <th class="col-status">Status</th>
+      </tr>
+    </thead>
+    <tbody id="depBody">
+      <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="board-section">
+  <div class="section-title">&#8600; Arrivals</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-time">Time</th>
+        <th class="col-flight">Flight</th>
+        <th class="col-airline">Airline</th>
+        <th class="col-route">Origin</th>
+        <th class="col-gate">Gate</th>
+        <th class="col-status">Status</th>
+      </tr>
+    </thead>
+    <tbody id="arrBody">
+      <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<script>
+const GQL_HTTP = "/graphql";
+const GQL_WS   = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/graphql`;
+
+const FLIGHT_FIELDS = `
+  id flightNumber airline origin destination direction status
+  scheduledDeparture scheduledArrival actualDeparture actualArrival
+  delayReason
+  gate { gateNumber terminal }
+`;
+
+// ── State ──────────────────────────────────────────────────────────────
+const flights = {};   // id → flight object
+
+// ── Clock ──────────────────────────────────────────────────────────────
+function tickClock() {
+  document.getElementById("clock").textContent =
+    new Date().toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ── Formatting helpers ─────────────────────────────────────────────────
+function fmtTime(iso) {
+  if (!iso) return "–";
+  return new Date(iso).toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" });
+}
+
+function statusClass(s) {
+  return "status status-" + (s || "").toLowerCase();
+}
+
+function gateHtml(gate) {
+  if (!gate) return `<span class="gate-tbd">–</span>`;
+  return `<span class="gate-label">T${gate.terminal} ${gate.gateNumber}</span>`;
+}
+
+function timeHtml(flight) {
+  const isDep = flight.direction?.toUpperCase() === "DEPARTURE";
+  const scheduled = isDep ? flight.scheduledDeparture : flight.scheduledArrival;
+  const actual    = isDep ? flight.actualDeparture    : flight.actualArrival;
+  if (actual) return `<span class="time-actual">${fmtTime(actual)}</span>`;
+  return fmtTime(scheduled);
+}
+
+function routeHtml(flight) {
+  return flight.direction?.toUpperCase() === "DEPARTURE" ? flight.destination : flight.origin;
+}
+
+// ── Render ─────────────────────────────────────────────────────────────
+function renderTables() {
+  const sorted = Object.values(flights).sort((a, b) => {
+    const ta = a.direction === "Departure" ? a.scheduledDeparture : a.scheduledArrival;
+    const tb = b.direction === "Departure" ? b.scheduledDeparture : b.scheduledArrival;
+    return new Date(ta) - new Date(tb);
+  });
+
+  const deps = sorted.filter(f => f.direction?.toUpperCase() === "DEPARTURE");
+  const arrs = sorted.filter(f => f.direction?.toUpperCase() === "ARRIVAL");
+
+  renderGroup("depBody", deps);
+  renderGroup("arrBody", arrs);
+}
+
+function renderGroup(tbodyId, list) {
+  const tbody = document.getElementById(tbodyId);
+  if (!list.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No flights.</td></tr>`;
+    return;
+  }
+  // Update or create rows without full re-render to preserve flash state
+  const existing = {};
+  tbody.querySelectorAll("tr[data-id]").forEach(r => existing[r.dataset.id] = r);
+
+  // Remove rows no longer in list
+  Object.keys(existing).forEach(id => {
+    if (!list.find(f => f.id === id)) existing[id].remove();
+  });
+
+  list.forEach((flight, i) => {
+    let row = existing[flight.id];
+    const html = `
+      <td class="col-time">${timeHtml(flight)}</td>
+      <td class="col-flight">${flight.flightNumber}</td>
+      <td class="col-airline">${flight.airline}</td>
+      <td class="col-route">${routeHtml(flight)}</td>
+      <td class="col-gate">${gateHtml(flight.gate)}</td>
+      <td class="col-status"><span class="${statusClass(flight.status)}">${flight.status}</span></td>`;
+
+    if (row) {
+      if (row.innerHTML !== html) {
+        row.innerHTML = html;
+        row.classList.remove("flash");
+        void row.offsetWidth;   // reflow to restart animation
+        row.classList.add("flash");
+      }
+      // Reorder if needed
+      tbody.appendChild(row);
+    } else {
+      row = document.createElement("tr");
+      row.dataset.id = flight.id;
+      row.innerHTML  = html;
+      tbody.appendChild(row);
+    }
+  });
+}
+
+// ── Initial HTTP load ──────────────────────────────────────────────────
+async function loadAll() {
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(GQL_HTTP, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ query: `{ flights { ${FLIGHT_FIELDS} } }` })
+  });
+  const data = await res.json();
+  (data.data?.flights || []).forEach(f => flights[f.id] = f);
+  renderTables();
+}
+
+// ── WebSocket subscription ─────────────────────────────────────────────
+let ws, wsRetry = 1000;
+
+function setLive(connected) {
+  const dot   = document.getElementById("liveDot");
+  const label = document.getElementById("liveLabel");
+  if (connected) {
+    dot.className   = "live-dot connected";
+    label.textContent = "Live";
+  } else {
+    dot.className   = "live-dot";
+    label.textContent = "Reconnecting…";
+  }
+}
+
+function connectWs() {
+  ws = new WebSocket(GQL_WS, "graphql-transport-ws");
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: "connection_init", payload: {} }));
+  };
+
+  ws.onmessage = (evt) => {
+    const msg = JSON.parse(evt.data);
+
+    if (msg.type === "connection_ack") {
+      setLive(true);
+      wsRetry = 1000;
+      ws.send(JSON.stringify({
+        id: "board",
+        type: "subscribe",
+        payload: { query: `subscription { onAnyFlightUpdated { ${FLIGHT_FIELDS} } }` }
+      }));
+    }
+
+    if (msg.type === "next" && msg.payload?.data?.onAnyFlightUpdated) {
+      const f = msg.payload.data.onAnyFlightUpdated;
+      flights[f.id] = f;
+      renderTables();
+    }
+  };
+
+  ws.onclose = ws.onerror = () => {
+    setLive(false);
+    setTimeout(connectWs, Math.min(wsRetry *= 1.5, 30000));
+  };
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────
+loadAll().then(connectWs);
+</script>
+</body>
+</html>
