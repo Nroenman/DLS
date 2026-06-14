@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/graphql";
+const API_URL = "/graphql";
 
 const TICKET_PRICE = 500;
 const BAGGAGE_PRICE_PER_KG = 10;
@@ -190,7 +190,7 @@ async function payNow() {
 console.log('Idempotency key: '+ idempotencyKey);
         // Betalingskald med idempotencyKey
         const paymentResponse = await fetch(
-            "http://localhost:5000/api/payment/stripe/checkout",
+            "/api/payment/stripe/checkout",
             {
                 method: "POST",
                 headers: {

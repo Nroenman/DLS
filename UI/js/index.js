@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/graphql";
+const API_URL = "/graphql";
 
 function formatDate(dateStr) {
     if (!dateStr) return "Unknown time";

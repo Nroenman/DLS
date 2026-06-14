@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/graphql";
+const API_URL = "/graphql";
 
 function formatDate(dateStr) {
     if (!dateStr) return "Unknown";
@@ -199,7 +199,7 @@ async function createBooking(flightId) {
             ]
         };
 
-        const bookingResponse = await fetch("http://localhost:5000/api/Booking", {
+        const bookingResponse = await fetch("/api/Booking", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
