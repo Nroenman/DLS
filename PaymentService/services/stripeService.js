@@ -10,10 +10,15 @@ const sendNotification = async (notification) => {
   await sendToQueue("Notification", notification);
 };
 
+const notifyBookingService = async (notification) => {
+  await sendToQueue("booking_queue", notification);
+};
+
 const stripeCheckout = async (req, res) => {
 
 const { BookingId, UserId, TotalPrice, ContactEmail, ContactPhone } = req.body;
-const idempotency_key = req.headers['Idempotency-Key']; 
+const idempotency_key = req.headers["idempotency-key"];
+console.log("Idempotency key " +req.headers["idempotency-key"]);
 const booking_id = BookingId;
 const user_id = UserId;
 const amount = Math.round(Number(TotalPrice) * 100);
@@ -21,9 +26,9 @@ const currency = "DKK";
 const userEmail = ContactEmail;
 const userPhone = ContactPhone;
 
-if (!booking_id || !user_id || !TotalPrice || Number.isNaN(amount) || !idempotency_key) {
+if (!booking_id || !user_id || !TotalPrice || Number.isNaN(amount) ) {
   return res.status(400).json({
-    error: "BookingId, UserId, TotalPrice and idempotencyKey are required"
+    error: "BookingId, UserId, TotalPrice are required."
   });
 }
 
@@ -127,9 +132,9 @@ try {
           userEmail: userEmail || ""
         }
       },
-      {
-        idempotency_key 
-      }
+   {
+  idempotencyKey: idempotency_key
+}
     );
 
     // log new payment in the database after the checkout flow is completed
@@ -139,7 +144,7 @@ try {
         idempotency_key: idempotency_key,
         amount,
         currency,
-        status: session.payment_status,
+        status: "PENDING",
         stripe_session_id: session.id
       });
     
@@ -187,6 +192,12 @@ const successRedirect = async (req, res) => {
     await existingPayment.update({
       status: "COMPLETED"
     });
+
+
+    await notifyBookingService({
+      BookingId: booking_id,
+      PaymentSucceeded: true
+});
 
     await sendNotification({
       fromName: "Airport Payment Service",
@@ -237,6 +248,18 @@ const cancelRedirect = async (req, res) => {
 
     await existingPayment.update({
       status: "PENDING"
+    });
+
+    notifyBookingService({
+      BookingId: booking_id,
+      PaymentSucceeded: false
+    });
+
+    await sendNotification({
+      fromName: "Airport Payment Service",
+      toEmail: existingPayment.user_id,
+      subject: "Payment not successful",
+      body: `Payment for booking ${booking_id} wasnt completed.`
     });
 
     return res.status(200).json({

@@ -168,7 +168,6 @@ async function payNow() {
     const phone = allQueryParams.phone;
 
     let idempotencyKey = localStorage.getItem(`idempotencyKey-${bookingId}`);
-        
     if (!idempotencyKey) 
         {
             // Generer og gem ny idempotency key, hvis den ikke eksisterer
@@ -188,7 +187,7 @@ async function payNow() {
     const totalPrice = TICKET_PRICE + baggagePrice;
     try {
         // Check om idempotency key allerede er gemt for denne booking
-
+console.log('Idempotency key: '+ idempotencyKey);
         // Betalingskald med idempotencyKey
         const paymentResponse = await fetch(
             "http://localhost:5000/api/payment/stripe/checkout",

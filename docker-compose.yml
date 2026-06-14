@@ -167,9 +167,9 @@ services:
     container_name: airport_payment
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
-      PORT: "3000"
+      PORT: "3001"
       RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
       STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-sk_test_dummy}"
       STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
