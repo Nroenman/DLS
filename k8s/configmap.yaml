@@ -9,6 +9,7 @@ data:
   Keycloak__Realm: airport-system
   Keycloak__ClientId: airport-api
   Keycloak__FrontendClientId: airport-frontend
+  KEYCLOAK_EXTERNAL_URL: "http://localhost:30880"
   RabbitMQ__Host: rabbitmq
   RabbitMQ__Port: "5672"
   Mail__FromEmail: noreply@airport.dk

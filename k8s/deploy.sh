@@ -22,6 +22,7 @@ docker build -t airport/notification:local "$PROJECT_ROOT/NotificationService"
 docker build -t airport/baggage:local   "$PROJECT_ROOT/BaggageAPI"
 docker build -t airport/payment:local   "$PROJECT_ROOT/PaymentService"
 docker build -t airport/assistant:local "$PROJECT_ROOT/AssistantService"
+docker build -t airport/ui:local        "$PROJECT_ROOT/UI"
 
 # Pull Ollama into minikube's daemon so the cluster can run it offline.
 docker pull ollama/ollama:latest
@@ -70,6 +71,7 @@ kubectl apply -f "$SCRIPT_DIR/ollama/"
 kubectl apply -f "$SCRIPT_DIR/assistant/"
 kubectl apply -f "$SCRIPT_DIR/gateway/"
 kubectl apply -f "$SCRIPT_DIR/baggage/"
+kubectl apply -f "$SCRIPT_DIR/ui/"
 kubectl apply -f "$SCRIPT_DIR/monitoring/airport-dashboard.yaml"
 
 # ── 8. Print access URLs ─────────────────────────────────────────────────────
@@ -89,6 +91,7 @@ echo "    Baggage API:          http://$MINIKUBE_IP:30501"
 echo "    Keycloak admin:       http://$MINIKUBE_IP:30880  (admin / admin)"
 echo "    RabbitMQ management:  http://$MINIKUBE_IP:30672  (guest / guest)"
 echo "    Grafana:              http://$MINIKUBE_IP:30300  (admin / admin)"
+echo "    Frontend UI:          http://$MINIKUBE_IP:30080"
 echo ""
 echo "==> Watch rollout:"
 echo "    kubectl get pods -n airport -w"
