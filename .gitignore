@@ -36,6 +36,9 @@
 .env
 .env.*
 
+# Generated Keycloak realm (produced at startup by import-realm.sh — contains real credentials)
+keycloak/airport-realm.json
+
 # Kubernetes secrets (copy from *.example and fill in real values)
 k8s/secrets.yaml
 k8s/**/secrets.yaml
