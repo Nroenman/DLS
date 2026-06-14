@@ -1,28 +1,17 @@
 using BaggageAPI.Data;
 using BaggageAPI.Dtos;
+using BaggageAPI.Interfaces;
 using BaggageAPI.Models;
 using BaggageAPI.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
 
-namespace BaggageAPI.Tests.Integration;
+namespace BaggageAPI.Test.IntegrationTest;
 
-/// <summary>
-/// Integration tests for BaggageService.
-///
-/// A real PostgreSQL container is started once for the entire test class
-/// (IAsyncLifetime), keeping test runs fast while still exercising
-/// the actual EF Core → Npgsql → PostgreSQL stack.
-/// RabbitMQ is intentionally mocked: the container test boundary ends at the
-/// database. RabbitMQ publishing is already covered by the unit tests.
-/// </summary>
 public class BaggageServiceIntegrationTests : IAsyncLifetime
 {
-    // ── Container & shared infrastructure ─────────────────────────────────────
-
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
         .WithDatabase("baggage_test")
@@ -32,8 +21,7 @@ public class BaggageServiceIntegrationTests : IAsyncLifetime
 
     private AppDbContext _ctx = null!;
     private BaggageService _service = null!;
-
-    // ── IAsyncLifetime ─────────────────────────────────────────────────────────
+    private Mock<IRabbitMqService> _rabbitMock = null!;
 
     public async ValueTask InitializeAsync()
     {
@@ -44,13 +32,10 @@ public class BaggageServiceIntegrationTests : IAsyncLifetime
             .Options;
 
         _ctx = new AppDbContext(options);
-        await _ctx.Database.EnsureCreatedAsync(); // applies the schema
+        await _ctx.Database.EnsureCreatedAsync();
 
-        var rabbitMock = new Mock<RabbitMqService>(MockBehavior.Loose,
-            Mock.Of<IConfiguration>());
-        rabbitMock.Setup(r => r.Publish(It.IsAny<string>(), It.IsAny<object>()));
-
-        _service = new BaggageService(_ctx, rabbitMock.Object);
+        _rabbitMock = new Mock<IRabbitMqService>();
+        _service = new BaggageService(_ctx, _rabbitMock.Object);
     }
 
     public async ValueTask DisposeAsync()
@@ -59,16 +44,11 @@ public class BaggageServiceIntegrationTests : IAsyncLifetime
         await _postgres.DisposeAsync();
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
-
-    /// <summary>Clears the Baggages table between tests.</summary>
     private async Task ResetAsync()
     {
         _ctx.Baggages.RemoveRange(_ctx.Baggages);
         await _ctx.SaveChangesAsync();
     }
-
-    // ── CreateAsync ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task CreateAsync_ValidDto_CanBeReadBackFromDatabase()
@@ -84,7 +64,6 @@ public class BaggageServiceIntegrationTests : IAsyncLifetime
 
         var created = await _service.CreateAsync(dto);
 
-        // Re-query to confirm persistence went through the full EF → PostgreSQL stack
         var stored = await _ctx.Baggages
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == created.Id);
@@ -127,8 +106,6 @@ public class BaggageServiceIntegrationTests : IAsyncLifetime
         var count = await _ctx.Baggages.CountAsync(b => b.PassengerId == passengerId);
         Assert.Equal(2, count);
     }
-
-    // ── UpdateStatusAsync ──────────────────────────────────────────────────────
 
     [Fact]
     public async Task UpdateStatusAsync_ExistingId_ChangesArePersisted()
@@ -184,7 +161,6 @@ public class BaggageServiceIntegrationTests : IAsyncLifetime
             Assert.Equal(location, result.CurrentLocation);
         }
 
-        // Confirm final state in DB
         var final = await _ctx.Baggages.AsNoTracking().FirstAsync(b => b.Id == created.Id);
         Assert.Equal(BaggageStatus.Claimed, final.Status);
         Assert.Equal("Carousel 2", final.CurrentLocation);
@@ -203,8 +179,6 @@ public class BaggageServiceIntegrationTests : IAsyncLifetime
 
         Assert.Null(result);
     }
-
-    // ── GetByPassenger ─────────────────────────────────────────────────────────
 
     [Fact]
     public async Task GetByPassenger_ReturnsOnlyBaggageBelongingToPassenger()

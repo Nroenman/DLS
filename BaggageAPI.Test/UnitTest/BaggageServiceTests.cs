@@ -1,19 +1,14 @@
 using BaggageAPI.Data;
 using BaggageAPI.Dtos;
+using BaggageAPI.Interfaces;
 using BaggageAPI.Models;
 using BaggageAPI.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
 
-namespace BaggageAPI.Tests.Unit;
-
-// ── Shared container fixture ───────────────────────────────────────────────────
-// One PostgreSQL container is started for the entire unit test class.
-// Each test calls ResetAsync() to truncate data, so tests stay isolated
-// without the cost of spinning up a new container per test.
+namespace BaggageAPI.Test.UnitTest;
 
 public class PostgresFixture : IAsyncLifetime
 {
@@ -31,7 +26,6 @@ public class PostgresFixture : IAsyncLifetime
         await _container.StartAsync();
         ConnectionString = _container.GetConnectionString();
 
-        // Apply schema once
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(ConnectionString)
             .Options;
@@ -42,19 +36,12 @@ public class PostgresFixture : IAsyncLifetime
     public async ValueTask DisposeAsync() => await _container.DisposeAsync();
 }
 
-// ── Unit tests ─────────────────────────────────────────────────────────────────
-// "Unit" here means: one class under test (BaggageService) with all *external*
-// dependencies either real-but-isolated (PostgreSQL via Testcontainers) or
-// mocked (RabbitMQ). This gives true SQL behaviour without a live broker.
-
 public class BaggageServiceTests(PostgresFixture fixture)
     : IClassFixture<PostgresFixture>, IAsyncLifetime
 {
     private AppDbContext _ctx = null!;
     private BaggageService _service = null!;
-    private Mock<RabbitMqService> _rabbitMock = null!;
-
-    // ── Per-test setup / teardown ──────────────────────────────────────────────
+    private Mock<IRabbitMqService> _rabbitMock = null!;
 
     public async ValueTask InitializeAsync()
     {
@@ -64,13 +51,9 @@ public class BaggageServiceTests(PostgresFixture fixture)
 
         _ctx = new AppDbContext(options);
 
-        _rabbitMock = new Mock<RabbitMqService>(
-            MockBehavior.Loose, Mock.Of<IConfiguration>());
-        _rabbitMock.Setup(r => r.Publish(It.IsAny<string>(), It.IsAny<object>()));
-
+        _rabbitMock = new Mock<IRabbitMqService>();
         _service = new BaggageService(_ctx, _rabbitMock.Object);
 
-        // Clean slate before every test
         await TruncateAsync();
     }
 
@@ -80,8 +63,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
     {
         await _ctx.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Baggages\" RESTART IDENTITY CASCADE;");
     }
-
-    // ── Helpers ────────────────────────────────────────────────────────────────
 
     private static Baggage SeedBaggage(Guid? passengerId = null) => new()
     {
@@ -94,12 +75,9 @@ public class BaggageServiceTests(PostgresFixture fixture)
         CreatedAt       = DateTime.UtcNow
     };
 
-    // ── CreateAsync ────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task CreateAsync_ValidDto_ReturnsBaggageWithCheckedInStatus()
     {
-        // White-box: BaggageService hardcodes Status = BaggageStatus.CheckedIn
         var result = await _service.CreateAsync(new CreateBaggageDto
         {
             BookingId   = Guid.NewGuid(),
@@ -113,7 +91,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
     [Fact]
     public async Task CreateAsync_ValidDto_SetsCurrentLocationToCheckIn()
     {
-        // White-box: service hardcodes CurrentLocation = "Check-in"
         var result = await _service.CreateAsync(new CreateBaggageDto
         {
             BookingId   = Guid.NewGuid(),
@@ -140,8 +117,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
     [Fact]
     public async Task CreateAsync_ValidDto_PersistsBaggageToPostgres()
     {
-        // Re-query with AsNoTracking to confirm a real round-trip to PostgreSQL,
-        // not just EF's change tracker returning the cached object.
         var dto = new CreateBaggageDto
         {
             BookingId   = Guid.NewGuid(),
@@ -181,7 +156,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
     [Fact]
     public async Task CreateAsync_ValidDto_PublishesToBaggageQueue()
     {
-        // White-box: Publish("baggagequeue", ...) is called exactly once after save
         await _service.CreateAsync(new CreateBaggageDto
         {
             BookingId   = Guid.NewGuid(),
@@ -193,8 +167,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
             r => r.Publish("baggagequeue", It.IsAny<object>()),
             Times.Once);
     }
-
-    // ── UpdateStatusAsync ──────────────────────────────────────────────────────
 
     [Fact]
     public async Task UpdateStatusAsync_ExistingId_UpdatesStatusAndLocation()
@@ -235,7 +207,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
     [Fact]
     public async Task UpdateStatusAsync_NonExistentId_ReturnsNull()
     {
-        // White-box: FindAsync returns null → service returns null without touching DB
         var result = await _service.UpdateStatusAsync(Guid.NewGuid(), new UpdateBaggageStatusDto
         {
             Status   = BaggageStatus.InTransit,
@@ -248,7 +219,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
     [Fact]
     public async Task UpdateStatusAsync_ExistingId_PublishesToBaggageQueue()
     {
-        // White-box: Publish is called only when baggage is found
         var baggage = SeedBaggage();
         _ctx.Baggages.Add(baggage);
         await _ctx.SaveChangesAsync();
@@ -267,7 +237,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
     [Fact]
     public async Task UpdateStatusAsync_NonExistentId_DoesNotPublish()
     {
-        // White-box: null-guard returns before Publish is reached
         await _service.UpdateStatusAsync(Guid.NewGuid(), new UpdateBaggageStatusDto
         {
             Status   = BaggageStatus.Loaded,
@@ -278,8 +247,6 @@ public class BaggageServiceTests(PostgresFixture fixture)
             r => r.Publish(It.IsAny<string>(), It.IsAny<object>()),
             Times.Never);
     }
-
-    // ── GetByPassenger ─────────────────────────────────────────────────────────
 
     [Fact]
     public async Task GetByPassenger_PassengerWithBaggage_ReturnsOnlyTheirBaggage()

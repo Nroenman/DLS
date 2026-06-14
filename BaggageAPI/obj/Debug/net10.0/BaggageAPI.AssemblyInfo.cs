@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BaggageAPI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+071712a129d1bff6dcf2c0d167c0f64e9efae650")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9100bc1ce91a94520bb9e6308d7cde83052ac2b4")]
 [assembly: System.Reflection.AssemblyProductAttribute("BaggageAPI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BaggageAPI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

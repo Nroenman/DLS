@@ -1,11 +1,11 @@
 ﻿using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
+using BaggageAPI.Interfaces;
 
 namespace BaggageAPI.Services;
 
-public class RabbitMqService : IDisposable
-{
+public class RabbitMqService : IRabbitMqService, IDisposable{
     private readonly IConnection _connection;
     private readonly IModel _channel;
 
