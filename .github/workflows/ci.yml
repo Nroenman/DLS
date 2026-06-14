@@ -250,7 +250,7 @@ jobs:
             dockerfile: BookingService/Dockerfile
             context: BookingService
           - service: baggage
-            dockerfile: BaggageAPI/dockerfile
+            dockerfile: BaggageAPI/Dockerfile
             context: BaggageAPI
           - service: gateway
             dockerfile: gateway/Dockerfile
