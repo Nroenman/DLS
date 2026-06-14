@@ -51,6 +51,10 @@
               <a class="nav-link" href="info-screen.html">Flight Board</a>
             </li>
 
+            <li class="nav-item d-none" id="staffNavItem">
+              <a class="nav-link" href="staff.html">Staff</a>
+            </li>
+
             <!-- <li class="nav-item dropdown notification-nav">
               <a class="nav-link notification-bell dropdown-toggle" href="#" id="notificationDropdown"
                  role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -263,6 +267,13 @@
     if (!token) { window.location.href = "login.html"; return; }
 
     const userId = getUserIdFromToken(token);
+
+    // Show Staff nav link for Staff/Admin users
+    try {
+      const roles = JSON.parse(atob(token.split(".")[1]))?.realm_access?.roles || [];
+      if (roles.includes("Staff") || roles.includes("Admin"))
+        document.getElementById("staffNavItem").classList.remove("d-none");
+    } catch { /* ignore */ }
 
     // All three fetches start in parallel.
     // Render booking cards as soon as bookings + flights arrive without

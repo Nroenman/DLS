@@ -81,6 +81,10 @@ http://www.templatemo.com/tm-511-journey
     </a>
 </li>
 
+<li class="nav-item auth-logged-in d-none" id="staffNavItem" style="display:none;">
+    <a class="nav-link external" href="pages/staff.html">Staff</a>
+</li>
+
 <li class="nav-item dropdown auth-logged-in" style="display:none;">
 
     <a class="nav-link dropdown-toggle user-name external"
@@ -478,6 +482,13 @@ function updateNavbarAuthState() {
 
     loggedOutItems.forEach(x => x.style.display = "none");
     loggedInItems.forEach(x => x.style.display = "");
+
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const roles = payload?.realm_access?.roles || [];
+      if (roles.includes("Staff") || roles.includes("Admin"))
+        document.getElementById("staffNavItem").style.display = "";
+    } catch { /* ignore */ }
 }
 
 function logout() {

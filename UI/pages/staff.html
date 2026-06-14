@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Staff Dashboard</title>
+
+  <link rel="stylesheet" href="../css/bootstrap.min.css">
+  <link rel="stylesheet" href="../font-awesome-4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/templatemo-style.css">
+
+  <style>
+    .staff-header {
+      background: #fff;
+      border-bottom: 3px solid #69c6ba;
+      padding: 20px 0 0;
+      margin-bottom: 0;
+    }
+    .staff-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 12px;
+    }
+    .staff-header .badge-role {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 3px 10px;
+      border-radius: 3px;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+    .badge-admin  { background: #c66995; color: #fff; }
+    .badge-staff  { background: #69c6ba; color: #fff; }
+
+    .nav-tabs .nav-link          { color: #555; font-weight: 600; border: none; border-bottom: 3px solid transparent; }
+    .nav-tabs .nav-link.active   { color: #69c6ba; border-bottom-color: #69c6ba; background: none; }
+    .nav-tabs .nav-link:hover    { color: #69c6ba; }
+    .nav-tabs { border-bottom: 1px solid #ddd; }
+
+    .tab-content { padding: 24px 0; }
+
+    .btn-primary   { background: #69c6ba; border-color: #69c6ba; color: #fff; }
+    .btn-primary:hover { background: #57b0a4; border-color: #57b0a4; }
+    .btn-warning   { background: #f0c040; border-color: #f0c040; color: #333; }
+    .btn-sm        { font-size: 12px; padding: 3px 10px; }
+
+    .table thead th { background: #f5f5f5; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #777; font-weight: 600; }
+    .table tbody tr:hover { background: #f9fffe; }
+    .table td { vertical-align: middle; font-size: 14px; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .s-SCHEDULED  { background: #e8eaf6; color: #5c6bc0; }
+    .s-BOARDING   { background: #e8f5e9; color: #2e7d32; }
+    .s-DEPARTED   { background: #efefef; color: #888; }
+    .s-ARRIVED    { background: #efefef; color: #888; }
+    .s-DELAYED    { background: #fff8e1; color: #f57f17; }
+    .s-CANCELLED  { background: #fce4ec; color: #c62828; }
+
+    .dir-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+    .dir-DEPARTURE { background: #e3f2fd; color: #1565c0; }
+    .dir-ARRIVAL   { background: #f3e5f5; color: #6a1b9a; }
+
+    .avail-yes { color: #2e7d32; font-weight: 600; }
+    .avail-no  { color: #c62828; font-weight: 600; }
+
+    .alert-staff {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      color: #5d4037;
+      padding: 12px 18px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .section-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .section-toolbar h5 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: #444;
+    }
+
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+    }
+    .toast-msg {
+      background: #333;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 5px;
+      margin-top: 8px;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .toast-msg.show { opacity: 1; }
+    .toast-msg.ok   { background: #2e7d32; }
+    .toast-msg.err  { background: #c62828; }
+  </style>
+</head>
+<body>
+<div class="tm-page-wrap mx-auto">
+
+  <!-- ── Navigation ──────────────────────────────────────────────────────── -->
+  <div class="tm-top-bar">
+    <div class="container">
+      <nav class="navbar navbar-expand-lg narbar-light">
+        <a class="navbar-brand mr-auto" href="../index.html">
+          <img src="../img/logo.png" alt="Site logo"> Flight Booking
+        </a>
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#mainNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div id="mainNav" class="collapse navbar-collapse tm-bg-white">
+          <ul class="navbar-nav ml-auto align-items-lg-center">
+            <li class="nav-item"><a class="nav-link" href="../index.html">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="user-bookings.html">My Bookings</a></li>
+            <li class="nav-item"><a class="nav-link" href="info-screen.html">Flight Board</a></li>
+            <li class="nav-item"><a class="nav-link active" href="staff.html">Staff</a></li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="fa fa-user-circle"></i>
+                <span id="navbarUserName">Account</span>
+              </a>
+              <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                <div class="dropdown-item text-muted small">
+                  <div id="dropdownUserName"></div>
+                  <div id="dropdownUserEmail"></div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="#" onclick="logout()">Log Out</a>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- ── Staff header ────────────────────────────────────────────────────── -->
+  <div class="staff-header">
+    <div class="container">
+      <h1>
+        Staff Dashboard
+        <span class="badge-role badge-admin d-none" id="badgeAdmin">Admin</span>
+        <span class="badge-role badge-staff d-none" id="badgeStaff">Staff</span>
+      </h1>
+      <ul class="nav nav-tabs" id="staffTabs">
+        <li class="nav-item">
+          <a class="nav-link active" data-toggle="tab" href="#tab-flights">
+            <i class="fa fa-plane"></i> Flights
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-toggle="tab" href="#tab-gates">
+            <i class="fa fa-map-marker"></i> Gates
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Tab content ─────────────────────────────────────────────────────── -->
+  <div class="container">
+    <div class="tab-content">
+
+      <!-- Flights tab -->
+      <div class="tab-pane fade show active" id="tab-flights">
+        <div class="section-toolbar">
+          <h5>All Flights</h5>
+          <button class="btn btn-primary btn-sm" onclick="openCreateFlight()">
+            <i class="fa fa-plus"></i> Add Flight
+          </button>
+        </div>
+        <div id="flightAlert" class="alert-staff d-none"></div>
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Flight</th>
+                <th>Airline</th>
+                <th>Route</th>
+                <th>Dir</th>
+                <th>Scheduled Dep</th>
+                <th>Scheduled Arr</th>
+                <th>Status</th>
+                <th>Gate</th>
+                <th style="width:80px"></th>
+              </tr>
+            </thead>
+            <tbody id="flightsBody">
+              <tr><td colspan="9" class="text-center text-muted py-4">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Gates tab -->
+      <div class="tab-pane fade" id="tab-gates">
+        <div class="section-toolbar">
+          <h5>All Gates</h5>
+          <button class="btn btn-primary btn-sm" onclick="openCreateGate()">
+            <i class="fa fa-plus"></i> Add Gate
+          </button>
+        </div>
+        <div id="gateAlert" class="alert-staff d-none"></div>
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Gate</th>
+                <th>Terminal</th>
+                <th>Available</th>
+                <th style="width:160px"></th>
+              </tr>
+            </thead>
+            <tbody id="gatesBody">
+              <tr><td colspan="4" class="text-center text-muted py-4">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /tm-page-wrap -->
+
+
+<!-- ── Modal: Create Flight ──────────────────────────────────────────────── -->
+<div class="modal fade" id="createFlightModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Flight</h5>
+        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <form id="createFlightForm">
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label>Flight Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="cf-number" placeholder="SK501" required>
+            </div>
+            <div class="form-group col-md-4">
+              <label>Airline <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="cf-airline" placeholder="SAS" required>
+            </div>
+            <div class="form-group col-md-4">
+              <label>Direction <span class="text-danger">*</span></label>
+              <select class="form-control" id="cf-direction">
+                <option value="DEPARTURE">Departure</option>
+                <option value="ARRIVAL">Arrival</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Origin <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="cf-origin" placeholder="CPH" maxlength="4" required>
+            </div>
+            <div class="form-group col-md-6">
+              <label>Destination <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="cf-dest" placeholder="AMS" maxlength="4" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Scheduled Departure <span class="text-danger">*</span></label>
+              <input type="datetime-local" class="form-control" id="cf-dep" required>
+            </div>
+            <div class="form-group col-md-6">
+              <label>Scheduled Arrival <span class="text-danger">*</span></label>
+              <input type="datetime-local" class="form-control" id="cf-arr" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Gate (optional)</label>
+            <select class="form-control" id="cf-gate">
+              <option value="">— None —</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitCreateFlight()">Create Flight</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Update Flight ──────────────────────────────────────────────── -->
+<div class="modal fade" id="updateFlightModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Flight <span id="uf-title" class="text-muted ml-2"></span></h5>
+        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="uf-id">
+        <div class="form-group">
+          <label>Status</label>
+          <select class="form-control" id="uf-status">
+            <option value="">— Unchanged —</option>
+            <option value="SCHEDULED">Scheduled</option>
+            <option value="BOARDING">Boarding</option>
+            <option value="DEPARTED">Departed</option>
+            <option value="ARRIVED">Arrived</option>
+            <option value="DELAYED">Delayed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label>Actual Departure</label>
+            <input type="datetime-local" class="form-control" id="uf-actual-dep">
+          </div>
+          <div class="form-group col-md-6">
+            <label>Actual Arrival</label>
+            <input type="datetime-local" class="form-control" id="uf-actual-arr">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Delay Reason</label>
+          <input type="text" class="form-control" id="uf-delay-reason" placeholder="e.g. Technical issue">
+        </div>
+        <div class="form-group">
+          <label>Gate</label>
+          <select class="form-control" id="uf-gate">
+            <option value="">— None / Unchanged —</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitUpdateFlight()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Create Gate ────────────────────────────────────────────────── -->
+<div class="modal fade" id="createGateModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Gate</h5>
+        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Gate Number <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="cg-number" placeholder="B12" required>
+        </div>
+        <div class="form-group">
+          <label>Terminal <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="cg-terminal" placeholder="2" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitCreateGate()">Create Gate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Update Gate ────────────────────────────────────────────────── -->
+<div class="modal fade" id="updateGateModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Gate</h5>
+        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="ug-id">
+        <div class="form-group">
+          <label>Gate Number</label>
+          <input type="text" class="form-control" id="ug-number">
+        </div>
+        <div class="form-group">
+          <label>Terminal</label>
+          <input type="text" class="form-control" id="ug-terminal">
+        </div>
+        <div class="form-group form-check mt-2">
+          <input type="checkbox" class="form-check-input" id="ug-available">
+          <label class="form-check-label" for="ug-available">Available</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitUpdateGate()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast container ───────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/bootstrap.min.js"></script>
+<script>
+// ── Auth ──────────────────────────────────────────────────────────────────
+const GQL = "/graphql";
+
+function getToken() { return localStorage.getItem("access_token"); }
+
+function parseJwt(token) {
+  try { return JSON.parse(atob(token.split(".")[1])); }
+  catch { return null; }
+}
+
+function getRoles(payload) {
+  return payload?.realm_access?.roles || [];
+}
+
+function checkAccess() {
+  const token = getToken();
+  if (!token) { window.location.href = "login.html"; return null; }
+  const payload = parseJwt(token);
+  if (!payload) { window.location.href = "login.html"; return null; }
+  const roles = getRoles(payload);
+  const isAdmin = roles.includes("Admin");
+  const isStaff = roles.includes("Staff");
+  if (!isAdmin && !isStaff) {
+    alert("Access denied. Staff or Admin role required.");
+    window.location.href = "../index.html";
+    return null;
+  }
+  return { payload, isAdmin, isStaff };
+}
+
+function renderUserNav(payload) {
+  const name = payload.name || payload.preferred_username || payload.email || "User";
+  document.getElementById("navbarUserName").textContent = name;
+  document.getElementById("dropdownUserName").textContent = name;
+  document.getElementById("dropdownUserEmail").textContent = payload.email || "";
+}
+
+function logout() {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("user_info");
+  window.location.href = "login.html";
+}
+
+// ── State ─────────────────────────────────────────────────────────────────
+let allFlights = [];
+let allGates   = [];
+let userIsAdmin = false;
+
+// ── GraphQL helpers ───────────────────────────────────────────────────────
+async function gql(query, variables = {}) {
+  const res = await fetch(GQL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${getToken()}`
+    },
+    body: JSON.stringify({ query, variables })
+  });
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors.map(e => e.message).join("; "));
+  return json.data;
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function toast(msg, type = "ok") {
+  const el = document.createElement("div");
+  el.className = `toast-msg ${type}`;
+  el.textContent = msg;
+  document.getElementById("toast-container").appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 400);
+  }, 3500);
+}
+
+// ── Format helpers ────────────────────────────────────────────────────────
+function fmtDateLocal(iso) {
+  if (!iso) return "–";
+  return new Date(iso).toLocaleString("da-DK", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+function isoToLocal(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
+function localToIso(val) {
+  if (!val) return null;
+  return new Date(val).toISOString();
+}
+
+// ── Load data ─────────────────────────────────────────────────────────────
+async function loadFlights() {
+  const data = await gql(`{
+    flights {
+      id flightNumber airline origin destination direction status
+      scheduledDeparture scheduledArrival actualDeparture actualArrival delayReason
+      gate { id gateNumber terminal }
+    }
+  }`);
+  allFlights = data.flights || [];
+  renderFlights();
+}
+
+async function loadGates() {
+  const data = await gql(`{ gates { id gateNumber terminal isAvailable } }`);
+  allGates = data.gates || [];
+  renderGates();
+  populateGateSelects();
+}
+
+// ── Render flights ────────────────────────────────────────────────────────
+function renderFlights() {
+  const tbody = document.getElementById("flightsBody");
+  if (!allFlights.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No flights found.</td></tr>`;
+    return;
+  }
+  const sorted = [...allFlights].sort((a, b) =>
+    new Date(a.scheduledDeparture) - new Date(b.scheduledDeparture));
+
+  tbody.innerHTML = sorted.map(f => `
+    <tr>
+      <td><strong>${f.flightNumber}</strong></td>
+      <td>${f.airline}</td>
+      <td>${f.origin} → ${f.destination}</td>
+      <td><span class="dir-badge dir-${f.direction}">${f.direction === "DEPARTURE" ? "DEP" : "ARR"}</span></td>
+      <td>${fmtDateLocal(f.scheduledDeparture)}</td>
+      <td>${fmtDateLocal(f.scheduledArrival)}</td>
+      <td><span class="status-badge s-${f.status}">${f.status}</span></td>
+      <td>${f.gate ? `T${f.gate.terminal} ${f.gate.gateNumber}` : '<span class="text-muted">–</span>'}</td>
+      <td><button class="btn btn-warning btn-sm" onclick="openUpdateFlight('${f.id}')">Edit</button></td>
+    </tr>`).join("");
+}
+
+// ── Render gates ──────────────────────────────────────────────────────────
+function renderGates() {
+  const tbody = document.getElementById("gatesBody");
+  if (!allGates.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No gates found.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = allGates.map(g => `
+    <tr>
+      <td><strong>${g.gateNumber}</strong></td>
+      <td>${g.terminal}</td>
+      <td class="${g.isAvailable ? 'avail-yes' : 'avail-no'}">${g.isAvailable ? "Yes" : "No"}</td>
+      <td>
+        <button class="btn btn-warning btn-sm mr-1" onclick="openUpdateGate('${g.id}')">Edit</button>
+        ${userIsAdmin
+          ? `<button class="btn btn-danger btn-sm" onclick="deleteGate('${g.id}','${g.gateNumber}')">Delete</button>`
+          : ""}
+      </td>
+    </tr>`).join("");
+}
+
+// ── Populate gate <select> elements ──────────────────────────────────────
+function populateGateSelects() {
+  const opts = allGates.map(g =>
+    `<option value="${g.id}">T${g.terminal} ${g.gateNumber}</option>`).join("");
+  ["cf-gate", "uf-gate"].forEach(id => {
+    const sel = document.getElementById(id);
+    const noneOpt = sel.options[0].outerHTML;
+    sel.innerHTML = noneOpt + opts;
+  });
+}
+
+// ── Create flight ─────────────────────────────────────────────────────────
+function openCreateFlight() {
+  document.getElementById("createFlightForm").reset();
+  $("#createFlightModal").modal("show");
+}
+
+async function submitCreateFlight() {
+  const num      = document.getElementById("cf-number").value.trim();
+  const airline  = document.getElementById("cf-airline").value.trim();
+  const origin   = document.getElementById("cf-origin").value.trim().toUpperCase();
+  const dest     = document.getElementById("cf-dest").value.trim().toUpperCase();
+  const direction= document.getElementById("cf-direction").value;
+  const dep      = document.getElementById("cf-dep").value;
+  const arr      = document.getElementById("cf-arr").value;
+  const gateId   = document.getElementById("cf-gate").value || null;
+
+  if (!num || !airline || !origin || !dest || !dep || !arr) {
+    toast("Please fill all required fields.", "err"); return;
+  }
+
+  try {
+    const gateArg = gateId ? `, gateId: "${gateId}"` : "";
+    await gql(`mutation {
+      createFlight(input: {
+        flightNumber: "${num}"
+        airline: "${airline}"
+        origin: "${origin}"
+        destination: "${dest}"
+        direction: ${direction}
+        scheduledDeparture: "${localToIso(dep)}"
+        scheduledArrival: "${localToIso(arr)}"
+        ${gateId ? `gateId: "${gateId}"` : ""}
+      }) { flight { id flightNumber } }
+    }`);
+    toast(`Flight ${num} created.`);
+    $("#createFlightModal").modal("hide");
+    await loadFlights();
+  } catch (e) {
+    toast("Error: " + e.message, "err");
+  }
+}
+
+// ── Update flight ─────────────────────────────────────────────────────────
+function openUpdateFlight(id) {
+  const f = allFlights.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById("uf-id").value = id;
+  document.getElementById("uf-title").textContent = f.flightNumber;
+  document.getElementById("uf-status").value = "";
+  document.getElementById("uf-actual-dep").value = isoToLocal(f.actualDeparture);
+  document.getElementById("uf-actual-arr").value = isoToLocal(f.actualArrival);
+  document.getElementById("uf-delay-reason").value = f.delayReason || "";
+  document.getElementById("uf-gate").value = f.gate?.id || "";
+  $("#updateFlightModal").modal("show");
+}
+
+async function submitUpdateFlight() {
+  const id          = document.getElementById("uf-id").value;
+  const status      = document.getElementById("uf-status").value || null;
+  const actualDep   = document.getElementById("uf-actual-dep").value;
+  const actualArr   = document.getElementById("uf-actual-arr").value;
+  const delayReason = document.getElementById("uf-delay-reason").value.trim();
+  const gateId      = document.getElementById("uf-gate").value || null;
+
+  const parts = [`id: "${id}"`];
+  if (status)      parts.push(`status: ${status}`);
+  if (actualDep)   parts.push(`actualDeparture: "${localToIso(actualDep)}"`);
+  if (actualArr)   parts.push(`actualArrival: "${localToIso(actualArr)}"`);
+  if (delayReason) parts.push(`delayReason: "${delayReason}"`);
+  if (gateId)      parts.push(`gateId: "${gateId}"`);
+
+  try {
+    await gql(`mutation { updateFlight(input: { ${parts.join(", ")} }) { flight { id } } }`);
+    toast("Flight updated.");
+    $("#updateFlightModal").modal("hide");
+    await loadFlights();
+  } catch (e) {
+    toast("Error: " + e.message, "err");
+  }
+}
+
+// ── Create gate ───────────────────────────────────────────────────────────
+function openCreateGate() {
+  document.getElementById("cg-number").value = "";
+  document.getElementById("cg-terminal").value = "";
+  $("#createGateModal").modal("show");
+}
+
+async function submitCreateGate() {
+  const number   = document.getElementById("cg-number").value.trim();
+  const terminal = document.getElementById("cg-terminal").value.trim();
+  if (!number || !terminal) { toast("Gate number and terminal are required.", "err"); return; }
+  try {
+    await gql(`mutation {
+      createGate(input: { gateNumber: "${number}", terminal: "${terminal}" })
+      { gate { id } }
+    }`);
+    toast(`Gate ${number} created.`);
+    $("#createGateModal").modal("hide");
+    await loadGates();
+  } catch (e) {
+    toast("Error: " + e.message, "err");
+  }
+}
+
+// ── Update gate ───────────────────────────────────────────────────────────
+function openUpdateGate(id) {
+  const g = allGates.find(x => x.id === id);
+  if (!g) return;
+  document.getElementById("ug-id").value = id;
+  document.getElementById("ug-number").value = g.gateNumber;
+  document.getElementById("ug-terminal").value = g.terminal;
+  document.getElementById("ug-available").checked = g.isAvailable;
+  $("#updateGateModal").modal("show");
+}
+
+async function submitUpdateGate() {
+  const id        = document.getElementById("ug-id").value;
+  const number    = document.getElementById("ug-number").value.trim();
+  const terminal  = document.getElementById("ug-terminal").value.trim();
+  const available = document.getElementById("ug-available").checked;
+  const parts = [
+    `id: "${id}"`,
+    ...(number   ? [`gateNumber: "${number}"`]   : []),
+    ...(terminal ? [`terminal: "${terminal}"`]    : []),
+    `isAvailable: ${available}`
+  ];
+  try {
+    await gql(`mutation { updateGate(input: { ${parts.join(", ")} }) { gate { id } } }`);
+    toast("Gate updated.");
+    $("#updateGateModal").modal("hide");
+    await loadGates();
+  } catch (e) {
+    toast("Error: " + e.message, "err");
+  }
+}
+
+// ── Delete gate ───────────────────────────────────────────────────────────
+async function deleteGate(id, label) {
+  if (!confirm(`Delete gate ${label}? This will fail if the gate has flights assigned.`)) return;
+  try {
+    await gql(`mutation { deleteGate(input: { id: "${id}" }) { success } }`);
+    toast(`Gate ${label} deleted.`);
+    await loadGates();
+  } catch (e) {
+    toast("Error: " + e.message, "err");
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+(async () => {
+  const access = checkAccess();
+  if (!access) return;
+
+  const { payload, isAdmin } = access;
+  userIsAdmin = isAdmin;
+
+  renderUserNav(payload);
+
+  if (isAdmin) document.getElementById("badgeAdmin").classList.remove("d-none");
+  else         document.getElementById("badgeStaff").classList.remove("d-none");
+
+  await Promise.all([loadFlights(), loadGates()]);
+})();
+</script>
+</body>
+</html>
