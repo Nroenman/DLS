@@ -78,8 +78,7 @@ async function fetchFlightsById(flightIds, token) {
                         id
                         origin
                         destination
-                        scheduledDeparture
-                        scheduledArrival
+                        scheduledTime
                     }
                 }
             `
@@ -134,8 +133,8 @@ async function renderBookings() {
             to: flight.destination || "Unknown",
             departureAirport: flight.origin || "-",
             arrivalAirport: flight.destination || "-",
-            departureTime: flight.scheduledDeparture || booking.createdAt,
-            arrivalTime: flight.scheduledArrival || booking.createdAt,
+            departureTime: flight.scheduledTime || booking.createdAt,
+            arrivalTime: flight.scheduledTime || booking.createdAt,
             logo: "cph.png",
             price: booking.totalPrice,
             status: booking.status

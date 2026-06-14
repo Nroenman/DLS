@@ -7,8 +7,7 @@ public record CreateFlightInput(
     string Airline,
     string Origin,
     string Destination,
-    DateTime ScheduledDeparture,
-    DateTime ScheduledArrival,
+    DateTime ScheduledTime,
     FlightDirection Direction,
     Guid? GateId = null
 );
@@ -16,8 +15,7 @@ public record CreateFlightInput(
 public record UpdateFlightInput(
     Guid Id,
     FlightStatus? Status = null,
-    DateTime? ActualDeparture = null,
-    DateTime? ActualArrival = null,
+    DateTime? ActualTime = null,
     string? DelayReason = null,
     Guid? GateId = null
 );

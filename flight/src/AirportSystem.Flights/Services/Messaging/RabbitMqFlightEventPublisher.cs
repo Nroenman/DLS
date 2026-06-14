@@ -85,12 +85,9 @@ public class RabbitMqFlightEventPublisher : IFlightEventPublisher, IDisposable
         sb.Append(flight.Gate is not null
             ? $"<li>Gate: {Enc(flight.Gate.GateNumber)} (Terminal {Enc(flight.Gate.Terminal)})</li>"
             : "<li>Gate: not assigned</li>");
-        sb.Append($"<li>Scheduled departure: {flight.ScheduledDeparture:yyyy-MM-dd HH:mm} UTC</li>");
-        sb.Append($"<li>Scheduled arrival: {flight.ScheduledArrival:yyyy-MM-dd HH:mm} UTC</li>");
-        if (flight.ActualDeparture.HasValue)
-            sb.Append($"<li>Actual departure: {flight.ActualDeparture:yyyy-MM-dd HH:mm} UTC</li>");
-        if (flight.ActualArrival.HasValue)
-            sb.Append($"<li>Actual arrival: {flight.ActualArrival:yyyy-MM-dd HH:mm} UTC</li>");
+        sb.Append($"<li>Scheduled time: {flight.ScheduledTime:yyyy-MM-dd HH:mm} UTC</li>");
+        if (flight.ActualTime.HasValue)
+            sb.Append($"<li>Actual time: {flight.ActualTime:yyyy-MM-dd HH:mm} UTC</li>");
         sb.Append("</ul>");
         sb.Append("<p>You are receiving this email because you follow this flight.</p>");
         return sb.ToString();

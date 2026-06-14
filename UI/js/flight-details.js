@@ -43,8 +43,7 @@ async function fetchFlightById(id) {
                         destination
                         status
                         direction
-                        scheduledDeparture
-                        scheduledArrival
+                        scheduledTime
                         delayReason
                         gate {
                             gateNumber
@@ -133,8 +132,7 @@ async function renderFlightDetails() {
                 <div class="flight-meta">
                     <p><i class="fa fa-plane"></i> From: ${flight.origin}</p>
                     <p><i class="fa fa-map-marker"></i> To: ${flight.destination}</p>
-                    <p><i class="fa fa-clock-o"></i> Departure: ${formatDate(flight.scheduledDeparture)}</p>
-                    <p><i class="fa fa-clock-o"></i> Arrival: ${formatDate(flight.scheduledArrival)}</p>
+                    <p><i class="fa fa-clock-o"></i> Scheduled: ${formatDate(flight.scheduledTime)}</p>
                     <p><i class="fa fa-info-circle"></i> Direction: ${flight.direction}</p>
                     <p><i class="fa fa-map-signs"></i> ${gateText}</p>
                     ${flight.delayReason ? `<p><i class="fa fa-warning"></i> Delay reason: ${flight.delayReason}</p>` : ""}

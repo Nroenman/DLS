@@ -45,8 +45,7 @@ async function fetchFlightById(id) {
                         destination
                         status
                         direction
-                        scheduledDeparture
-                        scheduledArrival
+                        scheduledTime
                         gate {
                             gateNumber
                             terminal
@@ -110,8 +109,7 @@ async function renderCheckout() {
             <div class="checkout-meta">
                 <p><i class="fa fa-plane"></i> From: ${flight.origin}</p>
                 <p><i class="fa fa-map-marker"></i> To: ${flight.destination}</p>
-                <p><i class="fa fa-clock-o"></i> Departure: ${formatDate(flight.scheduledDeparture)}</p>
-                <p><i class="fa fa-clock-o"></i> Arrival: ${formatDate(flight.scheduledArrival)}</p>
+                <p><i class="fa fa-clock-o"></i> Scheduled: ${formatDate(flight.scheduledTime)}</p>
                 <p><i class="fa fa-map-signs"></i> ${gateText}</p>
                 <p><i class="fa fa-info-circle"></i> Status: ${flight.status}</p>
             </div>

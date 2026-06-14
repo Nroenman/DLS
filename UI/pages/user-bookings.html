@@ -251,7 +251,7 @@
       const res = await fetch("/graphql", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ query: `query { flights { id flightNumber airline origin destination scheduledDeparture scheduledArrival } }` })
+        body: JSON.stringify({ query: `query { flights { id flightNumber airline origin destination scheduledTime } }` })
       });
       const data = await res.json();
       const flights = data.data?.flights || [];
@@ -341,7 +341,7 @@
           <div class="booking-info-box">
             <span class="booking-status ${statusClass}">${statusLabel}</span>
             <h3>${flightLabel(booking, flightsMap)}</h3>
-            ${flight ? `<p>${new Date(flight.scheduledDeparture).toLocaleString("da-DK")} → ${new Date(flight.scheduledArrival).toLocaleString("da-DK")}</p>` : ""}
+            ${flight ? `<p>${new Date(flight.scheduledTime).toLocaleString("da-DK")}</p>` : ""}
             <p><strong>Booking ID:</strong> ${bookingId}</p>
             <p><strong>Passengers:</strong> ${booking.passengers?.length || 0}</p>
             <p><strong>Payment:</strong> ${paymentStatus}</p>
@@ -366,8 +366,7 @@
       <p><strong>Status:</strong> ${formatStatus(booking.status)}</p>
       <p><strong>Flight:</strong> ${flightLabel(booking, allFlights)}</p>
       ${flight ? `
-        <p><strong>Departure:</strong> ${new Date(flight.scheduledDeparture).toLocaleString("da-DK")}</p>
-        <p><strong>Arrival:</strong> ${new Date(flight.scheduledArrival).toLocaleString("da-DK")}</p>
+        <p><strong>Scheduled:</strong> ${new Date(flight.scheduledTime).toLocaleString("da-DK")}</p>
       ` : ""}
       <p><strong>Contact email:</strong> ${booking.contactEmail || "N/A"}</p>
       <p><strong>Contact phone:</strong> ${booking.contactPhone || "N/A"}</p>

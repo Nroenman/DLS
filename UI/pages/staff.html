@@ -209,8 +209,8 @@
                 <th>Airline</th>
                 <th>Route</th>
                 <th>Dir</th>
-                <th>Scheduled Dep</th>
-                <th>Scheduled Arr</th>
+                <th>Scheduled</th>
+                <th>Actual</th>
                 <th>Status</th>
                 <th>Gate</th>
                 <th style="width:80px"></th>
@@ -292,15 +292,9 @@
               <input type="text" class="form-control" id="cf-dest" placeholder="AMS" maxlength="4" required>
             </div>
           </div>
-          <div class="form-row">
-            <div class="form-group col-md-6">
-              <label>Scheduled Departure <span class="text-danger">*</span></label>
-              <input type="datetime-local" class="form-control" id="cf-dep" required>
-            </div>
-            <div class="form-group col-md-6">
-              <label>Scheduled Arrival <span class="text-danger">*</span></label>
-              <input type="datetime-local" class="form-control" id="cf-arr" required>
-            </div>
+          <div class="form-group">
+            <label>Scheduled Time <span class="text-danger">*</span></label>
+            <input type="datetime-local" class="form-control" id="cf-time" required>
           </div>
           <div class="form-group">
             <label>Gate (optional)</label>
@@ -340,15 +334,9 @@
             <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
-        <div class="form-row">
-          <div class="form-group col-md-6">
-            <label>Actual Departure</label>
-            <input type="datetime-local" class="form-control" id="uf-actual-dep">
-          </div>
-          <div class="form-group col-md-6">
-            <label>Actual Arrival</label>
-            <input type="datetime-local" class="form-control" id="uf-actual-arr">
-          </div>
+        <div class="form-group">
+          <label>Actual Time</label>
+          <input type="datetime-local" class="form-control" id="uf-actual-time">
         </div>
         <div class="form-group">
           <label>Delay Reason</label>
@@ -532,7 +520,7 @@ async function loadFlights() {
   const data = await gql(`{
     flights {
       id flightNumber airline origin destination direction status
-      scheduledDeparture scheduledArrival actualDeparture actualArrival delayReason
+      scheduledTime actualTime delayReason
       gate { id gateNumber terminal }
     }
   }`);
@@ -555,7 +543,7 @@ function renderFlights() {
     return;
   }
   const sorted = [...allFlights].sort((a, b) =>
-    new Date(a.scheduledDeparture) - new Date(b.scheduledDeparture));
+    new Date(a.scheduledTime) - new Date(b.scheduledTime));
 
   tbody.innerHTML = sorted.map(f => `
     <tr>
@@ -563,8 +551,8 @@ function renderFlights() {
       <td>${f.airline}</td>
       <td>${f.origin} → ${f.destination}</td>
       <td><span class="dir-badge dir-${f.direction}">${f.direction === "DEPARTURE" ? "DEP" : "ARR"}</span></td>
-      <td>${fmtDateLocal(f.scheduledDeparture)}</td>
-      <td>${fmtDateLocal(f.scheduledArrival)}</td>
+      <td>${fmtDateLocal(f.scheduledTime)}</td>
+      <td>${f.actualTime ? fmtDateLocal(f.actualTime) : '<span class="text-muted">–</span>'}</td>
       <td><span class="status-badge s-${f.status}">${f.status}</span></td>
       <td>${f.gate ? `T${f.gate.terminal} ${f.gate.gateNumber}` : '<span class="text-muted">–</span>'}</td>
       <td><button class="btn btn-warning btn-sm" onclick="openUpdateFlight('${f.id}')">Edit</button></td>
@@ -615,16 +603,14 @@ async function submitCreateFlight() {
   const origin   = document.getElementById("cf-origin").value.trim().toUpperCase();
   const dest     = document.getElementById("cf-dest").value.trim().toUpperCase();
   const direction= document.getElementById("cf-direction").value;
-  const dep      = document.getElementById("cf-dep").value;
-  const arr      = document.getElementById("cf-arr").value;
+  const time     = document.getElementById("cf-time").value;
   const gateId   = document.getElementById("cf-gate").value || null;
 
-  if (!num || !airline || !origin || !dest || !dep || !arr) {
+  if (!num || !airline || !origin || !dest || !time) {
     toast("Please fill all required fields.", "err"); return;
   }
 
   try {
-    const gateArg = gateId ? `, gateId: "${gateId}"` : "";
     await gql(`mutation {
       createFlight(input: {
         flightNumber: "${num}"
@@ -632,8 +618,7 @@ async function submitCreateFlight() {
         origin: "${origin}"
         destination: "${dest}"
         direction: ${direction}
-        scheduledDeparture: "${localToIso(dep)}"
-        scheduledArrival: "${localToIso(arr)}"
+        scheduledTime: "${localToIso(time)}"
         ${gateId ? `gateId: "${gateId}"` : ""}
       }) { flight { id flightNumber } }
     }`);
@@ -652,8 +637,7 @@ function openUpdateFlight(id) {
   document.getElementById("uf-id").value = id;
   document.getElementById("uf-title").textContent = f.flightNumber;
   document.getElementById("uf-status").value = "";
-  document.getElementById("uf-actual-dep").value = isoToLocal(f.actualDeparture);
-  document.getElementById("uf-actual-arr").value = isoToLocal(f.actualArrival);
+  document.getElementById("uf-actual-time").value = isoToLocal(f.actualTime);
   document.getElementById("uf-delay-reason").value = f.delayReason || "";
   document.getElementById("uf-gate").value = f.gate?.id || "";
   $("#updateFlightModal").modal("show");
@@ -662,15 +646,13 @@ function openUpdateFlight(id) {
 async function submitUpdateFlight() {
   const id          = document.getElementById("uf-id").value;
   const status      = document.getElementById("uf-status").value || null;
-  const actualDep   = document.getElementById("uf-actual-dep").value;
-  const actualArr   = document.getElementById("uf-actual-arr").value;
+  const actualTime  = document.getElementById("uf-actual-time").value;
   const delayReason = document.getElementById("uf-delay-reason").value.trim();
   const gateId      = document.getElementById("uf-gate").value || null;
 
   const parts = [`id: "${id}"`];
   if (status)      parts.push(`status: ${status}`);
-  if (actualDep)   parts.push(`actualDeparture: "${localToIso(actualDep)}"`);
-  if (actualArr)   parts.push(`actualArrival: "${localToIso(actualArr)}"`);
+  if (actualTime)  parts.push(`actualTime: "${localToIso(actualTime)}"`);
   if (delayReason) parts.push(`delayReason: "${delayReason}"`);
   if (gateId)      parts.push(`gateId: "${gateId}"`);
 

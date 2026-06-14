@@ -222,7 +222,7 @@ const GQL_WS   = `${location.protocol === "https:" ? "wss" : "ws"}://${location.
 
 const FLIGHT_FIELDS = `
   id flightNumber airline origin destination direction status
-  scheduledDeparture scheduledArrival actualDeparture actualArrival
+  scheduledTime actualTime
   delayReason
   gate { gateNumber terminal }
 `;
@@ -254,11 +254,8 @@ function gateHtml(gate) {
 }
 
 function timeHtml(flight) {
-  const isDep = flight.direction?.toUpperCase() === "DEPARTURE";
-  const scheduled = isDep ? flight.scheduledDeparture : flight.scheduledArrival;
-  const actual    = isDep ? flight.actualDeparture    : flight.actualArrival;
-  if (actual) return `<span class="time-actual">${fmtTime(actual)}</span>`;
-  return fmtTime(scheduled);
+  if (flight.actualTime) return `<span class="time-actual">${fmtTime(flight.actualTime)}</span>`;
+  return fmtTime(flight.scheduledTime);
 }
 
 function routeHtml(flight) {
@@ -267,11 +264,8 @@ function routeHtml(flight) {
 
 // ── Render ─────────────────────────────────────────────────────────────
 function renderTables() {
-  const sorted = Object.values(flights).sort((a, b) => {
-    const ta = a.direction === "Departure" ? a.scheduledDeparture : a.scheduledArrival;
-    const tb = b.direction === "Departure" ? b.scheduledDeparture : b.scheduledArrival;
-    return new Date(ta) - new Date(tb);
-  });
+  const sorted = Object.values(flights).sort((a, b) =>
+    new Date(a.scheduledTime) - new Date(b.scheduledTime));
 
   const deps = sorted.filter(f => f.direction?.toUpperCase() === "DEPARTURE");
   const arrs = sorted.filter(f => f.direction?.toUpperCase() === "ARRIVAL");

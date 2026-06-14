@@ -7,10 +7,8 @@ public class Flight
     public string Airline { get; set; } = string.Empty;
     public string Origin { get; set; } = string.Empty;
     public string Destination { get; set; } = string.Empty;
-    public DateTime ScheduledDeparture { get; set; }
-    public DateTime ScheduledArrival { get; set; }
-    public DateTime? ActualDeparture { get; set; }
-    public DateTime? ActualArrival { get; set; }
+    public DateTime ScheduledTime { get; set; }
+    public DateTime? ActualTime { get; set; }
     public FlightStatus Status { get; set; } = FlightStatus.Scheduled;
     public FlightDirection Direction { get; set; }
     public string? DelayReason { get; set; }

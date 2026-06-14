@@ -24,7 +24,7 @@ public class Mutation
         var flight = await flightService.CreateFlightAsync(
             input.FlightNumber, input.Airline,
             input.Origin, input.Destination,
-            input.ScheduledDeparture, input.ScheduledArrival,
+            input.ScheduledTime,
             input.Direction, input.GateId);
 
         await eventSender.SendAsync(nameof(Subscription.OnFlightCreated), flight);
@@ -40,8 +40,8 @@ public class Mutation
         [Service] ITopicEventSender eventSender)
     {
         var flight = await flightService.UpdateFlightAsync(
-            input.Id, input.Status, input.ActualDeparture,
-            input.ActualArrival, input.DelayReason, input.GateId);
+            input.Id, input.Status, input.ActualTime,
+            input.DelayReason, input.GateId);
 
         await eventSender.SendAsync(
             $"{nameof(Subscription.OnFlightUpdated)}_{flight.Id}", flight);

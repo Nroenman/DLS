@@ -7,14 +7,13 @@ public interface IFlightService
     Task<Flight> CreateFlightAsync(
         string flightNumber, string airline,
         string origin, string destination,
-        DateTime scheduledDeparture, DateTime scheduledArrival,
+        DateTime scheduledTime,
         FlightDirection direction, Guid? gateId = null);
 
     Task<Flight> UpdateFlightAsync(
         Guid id,
         FlightStatus? status = null,
-        DateTime? actualDeparture = null,
-        DateTime? actualArrival = null,
+        DateTime? actualTime = null,
         string? delayReason = null,
         Guid? gateId = null);
 

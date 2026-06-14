@@ -19,10 +19,8 @@ FLIGHTS_QUERY = """
     destination
     direction
     status
-    scheduledDeparture
-    scheduledArrival
-    actualDeparture
-    actualArrival
+    scheduledTime
+    actualTime
     delayReason
     gate {
       gateNumber
@@ -131,14 +129,14 @@ def _format_flights(flights: list[dict]) -> str:
         gate  = f.get("gate")
         gate_str  = f"Terminal {gate['terminal']} Gate {gate['gateNumber']}" if gate else "TBD"
         delay_str = f"\n  Delay reason: {f['delayReason']}" if f.get("delayReason") else ""
-        actual    = f.get("actualDeparture") or f.get("actualArrival")
+        actual     = f.get("actualTime")
         actual_str = f"\n  Actual time: {actual}" if actual else ""
         lines.append(
             f"- Flight {f['flightNumber']} operated by {f['airline']}\n"
             f"  From: {f['origin']}\n"
             f"  To:   {f['destination']}\n"
             f"  Direction: {f['direction']}\n"
-            f"  Scheduled: {f['scheduledDeparture']}\n"
+            f"  Scheduled: {f['scheduledTime']}\n"
             f"  Status: {f['status']}\n"
             f"  Gate: {gate_str}"
             f"{actual_str}{delay_str}"

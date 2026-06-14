@@ -54,8 +54,7 @@ public class TestDataBuilder
             Airline            = "SAS",
             Origin             = "CPH",
             Destination        = "LHR",
-            ScheduledDeparture = now.AddHours(2),
-            ScheduledArrival   = now.AddHours(4),
+            ScheduledTime = now.AddHours(2),
             Direction          = direction,
             Status             = status,
             GateId             = gateId

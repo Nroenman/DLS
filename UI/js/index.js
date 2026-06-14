@@ -60,7 +60,7 @@ function createFlightCard(flight) {
                     </h3>
 
                     <p class="tm-text-highlight">
-                        ${formatDate(flight.scheduledDeparture)} - ${formatDate(flight.scheduledArrival)}
+                        ${formatDate(flight.scheduledTime)}
                     </p>
 
                     <p class="tm-text-gray">
@@ -108,8 +108,7 @@ async function fetchFlights() {
                         destination
                         status
                         direction
-                        scheduledDeparture
-                        scheduledArrival
+                        scheduledTime
                         delayReason
                         gate {
                             gateNumber

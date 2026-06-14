@@ -21,25 +21,21 @@ public class FlightService : IFlightService
     public async Task<Flight> CreateFlightAsync(
         string flightNumber, string airline,
         string origin, string destination,
-        DateTime scheduledDeparture, DateTime scheduledArrival,
+        DateTime scheduledTime,
         FlightDirection direction, Guid? gateId = null)
     {
-        if (scheduledArrival <= scheduledDeparture)
-            throw new ArgumentException("Arrival must be after departure.");
-
         if (gateId.HasValue && !await _db.Gates.AnyAsync(g => g.Id == gateId))
             throw new KeyNotFoundException($"Gate '{gateId}' not found.");
 
         var flight = new Flight
         {
-            FlightNumber       = flightNumber,
-            Airline            = airline,
-            Origin             = origin,
-            Destination        = destination,
-            ScheduledDeparture = scheduledDeparture.ToUniversalTime(),
-            ScheduledArrival   = scheduledArrival.ToUniversalTime(),
-            Direction          = direction,
-            GateId             = gateId
+            FlightNumber  = flightNumber,
+            Airline       = airline,
+            Origin        = origin,
+            Destination   = destination,
+            ScheduledTime = scheduledTime.ToUniversalTime(),
+            Direction     = direction,
+            GateId        = gateId
         };
 
         _db.Flights.Add(flight);
@@ -52,8 +48,7 @@ public class FlightService : IFlightService
     public async Task<Flight> UpdateFlightAsync(
         Guid id,
         FlightStatus? status = null,
-        DateTime? actualDeparture = null,
-        DateTime? actualArrival = null,
+        DateTime? actualTime = null,
         string? delayReason = null,
         Guid? gateId = null)
     {
@@ -63,11 +58,8 @@ public class FlightService : IFlightService
         if (status.HasValue)
             flight.Status = status.Value;
 
-        if (actualDeparture.HasValue)
-            flight.ActualDeparture = actualDeparture.Value.ToUniversalTime();
-
-        if (actualArrival.HasValue)
-            flight.ActualArrival = actualArrival.Value.ToUniversalTime();
+        if (actualTime.HasValue)
+            flight.ActualTime = actualTime.Value.ToUniversalTime();
 
         if (delayReason is not null)
             flight.DelayReason = delayReason;
@@ -113,7 +105,7 @@ public class FlightService : IFlightService
             query = query.Where(f => f.Status == status.Value);
 
         return await query
-            .OrderBy(f => f.ScheduledDeparture)
+            .OrderBy(f => f.ScheduledTime)
             .ToListAsync();
     }
 
@@ -123,7 +115,7 @@ public class FlightService : IFlightService
             .Where(ff => ff.UserId == userId)
             .Include(ff => ff.Flight).ThenInclude(f => f.Gate)
             .Select(ff => ff.Flight)
-            .OrderBy(f => f.ScheduledDeparture)
+            .OrderBy(f => f.ScheduledTime)
             .ToListAsync();
     }
 

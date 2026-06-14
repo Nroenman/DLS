@@ -47,24 +47,24 @@ public static class DevDataSeeder
             {
                 FlightNumber = "BA2490", Airline = "British Airways",
                 Origin = "London Heathrow (LHR)", Destination = "Amsterdam (AMS)",
-                ScheduledDeparture = now.AddHours(1),  ScheduledArrival = now.AddHours(2.5),
-                Direction = FlightDirection.Departure,  Status = FlightStatus.Boarding,
+                ScheduledTime = now.AddHours(1),
+                Direction = FlightDirection.Departure, Status = FlightStatus.Boarding,
                 GateId = GateId("A1")
             },
             new Flight
             {
                 FlightNumber = "LH4481", Airline = "Lufthansa",
                 Origin = "London Heathrow (LHR)", Destination = "Frankfurt (FRA)",
-                ScheduledDeparture = now.AddHours(2),  ScheduledArrival = now.AddHours(4),
-                Direction = FlightDirection.Departure,  Status = FlightStatus.Scheduled,
+                ScheduledTime = now.AddHours(2),
+                Direction = FlightDirection.Departure, Status = FlightStatus.Scheduled,
                 GateId = GateId("A2")
             },
             new Flight
             {
                 FlightNumber = "FR1234", Airline = "Ryanair",
                 Origin = "London Heathrow (LHR)", Destination = "Barcelona (BCN)",
-                ScheduledDeparture = now.AddHours(3),  ScheduledArrival = now.AddHours(5.5),
-                Direction = FlightDirection.Departure,  Status = FlightStatus.Delayed,
+                ScheduledTime = now.AddHours(3),
+                Direction = FlightDirection.Departure, Status = FlightStatus.Delayed,
                 DelayReason = "Late incoming aircraft",
                 GateId = GateId("B1")
             },
@@ -72,7 +72,7 @@ public static class DevDataSeeder
             {
                 FlightNumber = "EK007", Airline = "Emirates",
                 Origin = "London Heathrow (LHR)", Destination = "Dubai (DXB)",
-                ScheduledDeparture = now.AddHours(5), ScheduledArrival = now.AddHours(12),
+                ScheduledTime = now.AddHours(5),
                 Direction = FlightDirection.Departure, Status = FlightStatus.Scheduled,
             },
             // Arrivals
@@ -80,16 +80,16 @@ public static class DevDataSeeder
             {
                 FlightNumber = "AF1680", Airline = "Air France",
                 Origin = "Paris CDG (CDG)", Destination = "London Heathrow (LHR)",
-                ScheduledDeparture = now.AddMinutes(-90), ScheduledArrival = now.AddMinutes(30),
-                Direction = FlightDirection.Arrival,   Status = FlightStatus.Scheduled,
+                ScheduledTime = now.AddMinutes(30),
+                Direction = FlightDirection.Arrival, Status = FlightStatus.Scheduled,
                 GateId = GateId("A3")
             },
             new Flight
             {
                 FlightNumber = "KL1009", Airline = "KLM",
                 Origin = "Amsterdam (AMS)", Destination = "London Heathrow (LHR)",
-                ScheduledDeparture = now.AddMinutes(-120), ScheduledArrival = now.AddMinutes(-15),
-                ActualArrival = now.AddMinutes(-10),
+                ScheduledTime = now.AddMinutes(-15),
+                ActualTime = now.AddMinutes(-10),
                 Direction = FlightDirection.Arrival, Status = FlightStatus.Arrived,
                 GateId = GateId("B2")
             },
@@ -97,7 +97,7 @@ public static class DevDataSeeder
             {
                 FlightNumber = "IB3170", Airline = "Iberia",
                 Origin = "Madrid (MAD)", Destination = "London Heathrow (LHR)",
-                ScheduledDeparture = now.AddHours(-3), ScheduledArrival = now.AddHours(-1),
+                ScheduledTime = now.AddHours(-1),
                 Direction = FlightDirection.Arrival, Status = FlightStatus.Cancelled,
                 DelayReason = "Crew unavailability"
             },
