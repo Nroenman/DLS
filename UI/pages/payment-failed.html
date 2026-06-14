@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Failed</title>
+
+    <link rel="stylesheet" href="../css/bootstrap.min.css">
+    <link rel="stylesheet" href="../font-awesome-4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../css/templatemo-style.css">
+
+    <style>
+        .error-wrapper {
+            max-width: 850px;
+            margin: 100px auto;
+            background: white;
+            box-shadow: 0 0 3px rgba(0,0,0,0.15);
+            padding: 50px;
+            text-align: center;
+        }
+
+        .error-icon {
+            width: 90px;
+            height: 90px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            font-size: 42px;
+        }
+
+        .error-title {
+            color: #dc3545;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .error-text {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .error-box {
+            background: #f5f6f6;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .error-box p {
+            margin-bottom: 10px;
+        }
+
+        .error-box i {
+            width: 22px;
+            color: #dc3545;
+        }
+
+        .btn-error {
+            background: #c66995;
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin: 5px;
+            display: inline-block;
+        }
+
+        .btn-error:hover {
+            background: #a94f7a;
+            color: white;
+        }
+
+        .btn-secondary-action {
+            background: #69c6ba;
+        }
+
+        .btn-secondary-action:hover {
+            background: #57b2a7;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="tm-page-wrap mx-auto">
+
+    <div class="tm-top-bar">
+        <div class="container">
+            <nav class="navbar navbar-expand-lg narbar-light">
+                <a class="navbar-brand mr-auto" href="../index.html">
+                    <img src="../img/logo.png" alt="Site logo">
+                    Flight Booking
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="tm-top-bar-bg"></div>
+
+    <main class="error-wrapper">
+
+        <div class="error-icon">
+            <i class="fa fa-times"></i>
+        </div>
+
+        <h1 class="error-title">Payment Failed</h1>
+
+        <p class="error-text">
+            Your payment was cancelled or could not be completed.
+        </p>
+
+        <div class="error-box">
+            <p><i class="fa fa-credit-card"></i> Payment status: <strong>Failed</strong></p>
+            <p><i class="fa fa-info-circle"></i> No charge has been confirmed.</p>
+            <p><i class="fa fa-refresh"></i> You can try again from your booking page.</p>
+        </div>
+
+        <a href="user-bookings.html" class="btn-error">
+            My Bookings
+        </a>
+
+        <a href="../index.html" class="btn-error btn-secondary-action">
+            Back to Flights
+        </a>
+
+    </main>
+
+    <footer class="tm-container-outer">
+        <p class="mb-0">
+            Copyright © <span class="tm-current-year"></span> Flight Booking
+        </p>
+    </footer>
+
+</div>
+
+<script>
+    document.querySelector(".tm-current-year").textContent =
+        new Date().getFullYear();
+</script>
+
+</body>
+</html>

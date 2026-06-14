@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Booking Confirmed</title>
+
+    <link rel="stylesheet" href="../css/bootstrap.min.css">
+    <link rel="stylesheet" href="../font-awesome-4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../css/templatemo-style.css">
+
+    <style>
+        .confirmation-wrapper {
+            max-width: 850px;
+            margin: 100px auto;
+            background: white;
+            box-shadow: 0 0 3px rgba(0,0,0,0.15);
+            padding: 50px;
+            text-align: center;
+        }
+
+        .confirmation-icon {
+            width: 90px;
+            height: 90px;
+            background: #69c6ba;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            font-size: 42px;
+        }
+
+        .confirmation-title {
+            color: #69c6ba;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .confirmation-text {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 30px;
+        }
+
+        .confirmation-box {
+            background: #f5f6f6;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .confirmation-box p {
+            margin-bottom: 10px;
+        }
+
+        .confirmation-box i {
+            width: 22px;
+            color: #c66995;
+        }
+
+        .btn-confirmation {
+            background: #c66995;
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin: 5px;
+            display: inline-block;
+        }
+
+        .btn-confirmation:hover {
+            background: #a94f7a;
+            color: white;
+        }
+
+        .btn-secondary-action {
+            background: #69c6ba;
+        }
+
+        .btn-secondary-action:hover {
+            background: #57b2a7;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="tm-page-wrap mx-auto">
+
+    <div class="tm-top-bar">
+        <div class="container">
+            <nav class="navbar navbar-expand-lg narbar-light">
+                <a class="navbar-brand mr-auto" href="../index.html">
+                    <img src="../img/logo.png" alt="Site logo">
+                    Flight Booking
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="tm-top-bar-bg"></div>
+
+    <main class="confirmation-wrapper">
+
+        <div class="confirmation-icon">
+            <i class="fa fa-check"></i>
+        </div>
+
+        <h1 class="confirmation-title">Booking Confirmed</h1>
+
+        <p class="confirmation-text">
+            Your payment was completed successfully and your booking is now being processed.
+        </p>
+
+        <div class="confirmation-box">
+            <p><i class="fa fa-credit-card"></i> Payment status: <strong>Completed</strong></p>
+            <p><i class="fa fa-envelope"></i> A confirmation email may be sent to your registered email.</p>
+            <p><i class="fa fa-suitcase"></i> Baggage information will be handled by the baggage service.</p>
+        </div>
+
+        <a href="user-bookings.html" class="btn-confirmation">
+            View My Bookings
+        </a>
+
+        <a href="../index.html" class="btn-confirmation btn-secondary-action">
+            Back to Flights
+        </a>
+
+    </main>
+
+    <footer class="tm-container-outer">
+        <p class="mb-0">
+            Copyright © <span class="tm-current-year"></span> Flight Booking
+        </p>
+    </footer>
+
+</div>
+
+<script>
+    document.querySelector(".tm-current-year").textContent =
+        new Date().getFullYear();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0"/>
+
+  <title>Signing in...</title>
+
+  <style>
+
+    body {
+      margin: 0;
+
+      height: 100vh;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      background: #0f172a;
+
+      color: white;
+
+      font-family: Arial, sans-serif;
+    }
+
+    .box {
+
+      width: 400px;
+
+      padding: 30px;
+
+      border-radius: 12px;
+
+      text-align: center;
+
+      background: #1e293b;
+    }
+
+    .spinner {
+
+      width: 50px;
+      height: 50px;
+
+      margin: 20px auto;
+
+      border-radius: 50%;
+
+      border: 5px solid #334155;
+      border-top: 5px solid #38bdf8;
+
+      animation: spin 1s linear infinite;
+    }
+
+    .error {
+      color: #f87171;
+      margin-top: 15px;
+      word-break: break-word;
+    }
+
+    @keyframes spin {
+
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+
+    <h2>Signing in...</h2>
+
+    <div class="spinner"></div>
+
+    <p id="status">
+      Completing authentication...
+    </p>
+
+    <div id="error"
+         class="error"></div>
+
+  </div>
+
+  <script>
+
+    const keycloakBase =
+      "http://localhost:8080";
+
+    const realm =
+      "airport-system";
+
+    const clientId =
+      "airport-frontend";
+
+const redirectUri =
+  `${window.location.origin}/pages/callback.html`;
+
+    async function handleCallback() {
+
+      try {
+
+        const params =
+          new URLSearchParams(window.location.search);
+
+        const code =
+          params.get("code");
+
+        if (!code) {
+          throw new Error(
+            "Authorization code missing"
+          );
+        }
+
+        const codeVerifier =
+          localStorage.getItem(
+            "pkce_code_verifier"
+          );
+
+        if (!codeVerifier) {
+          throw new Error(
+            "PKCE verifier missing"
+          );
+        }
+
+        /*
+          EXCHANGE CODE FOR TOKENS
+        */
+
+        const tokenResponse =
+          await fetch(
+            `${keycloakBase}/realms/${realm}/protocol/openid-connect/token`,
+            {
+
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/x-www-form-urlencoded"
+              },
+
+              body: new URLSearchParams({
+
+                grant_type:
+                  "authorization_code",
+
+                client_id:
+                  clientId,
+
+                code:
+                  code,
+
+                redirect_uri:
+                  redirectUri,
+
+                code_verifier:
+                  codeVerifier
+              })
+            }
+          );
+
+        if (!tokenResponse.ok) {
+
+          const errorText =
+            await tokenResponse.text();
+
+          throw new Error(errorText);
+        }
+
+        const tokens =
+          await tokenResponse.json();
+
+        console.log("TOKENS:", tokens);
+
+        localStorage.setItem(
+          "access_token",
+          tokens.access_token
+        );
+
+        localStorage.setItem(
+          "refresh_token",
+          tokens.refresh_token
+        );
+
+        localStorage.setItem(
+          "id_token",
+          tokens.id_token
+        );
+
+        /*
+          GET USER INFO
+        */
+
+        const userInfoResponse =
+          await fetch(
+            `${keycloakBase}/realms/${realm}/protocol/openid-connect/userinfo`,
+            {
+
+              headers: {
+                Authorization:
+                  `Bearer ${tokens.access_token}`
+              }
+            }
+          );
+
+        if (!userInfoResponse.ok) {
+
+          const errorText =
+            await userInfoResponse.text();
+
+          throw new Error(errorText);
+        }
+
+        const userInfo =
+          await userInfoResponse.json();
+
+        console.log(
+          "USER INFO:",
+          userInfo
+        );
+
+        /*
+          SAVE USER INFO
+        */
+
+        localStorage.setItem(
+          "user_info",
+          JSON.stringify(userInfo)
+        );
+
+        /*
+          CLEAN PKCE
+        */
+
+        localStorage.removeItem(
+          "pkce_code_verifier"
+        );
+
+        document.getElementById(
+          "status"
+        ).innerText =
+          "Login successful. Redirecting...";
+
+        setTimeout(() => {
+
+          window.location.href =
+            "/pages/user-bookings.html";
+
+        }, 1000);
+
+      }
+
+      catch (err) {
+
+        console.error(err);
+
+        document.getElementById(
+          "status"
+        ).innerText =
+          "Authentication failed";
+
+        document.getElementById(
+          "error"
+        ).innerText =
+          err.message;
+      }
+    }
+
+    handleCallback();
+
+  </script>
+
+</body>
+</html>

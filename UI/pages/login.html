@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Login - Flight Booking</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
+  <link rel="stylesheet" href="../font-awesome-4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/bootstrap.min.css">
+  <link rel="stylesheet" href="../css/templatemo-style.css">
+
+  <style>
+    .login-page {
+      min-height: 720px;
+      background: url(../img/banner.jpg) center top no-repeat;
+      background-size: cover;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 15px 60px;
+    }
+
+    .login-page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    .login-box {
+      position: relative;
+      z-index: 2;
+      background: #f5f6f6;
+      width: 100%;
+      max-width: 470px;
+      padding: 40px;
+      box-shadow: 0 0 3px rgba(0,0,0,0.15);
+      text-align: center;
+    }
+
+    .login-box h1 {
+      color: #69c6ba;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .login-box p {
+      color: #787676;
+      margin-bottom: 30px;
+    }
+
+    .login-icon {
+      font-size: 3rem;
+      color: #c66995;
+      margin-bottom: 20px;
+    }
+
+    .login-btn {
+      background: #69c6ba;
+      color: white;
+      border: none;
+      border-radius: 0;
+      padding: 14px 25px;
+      width: 100%;
+      text-transform: uppercase;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .login-btn:hover {
+      background: #c66995;
+      color: white;
+      text-decoration: none;
+    }
+
+    .login-small-link {
+      display: block;
+      margin-top: 20px;
+      color: #c66995;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="tm-main-content" id="top">
+    <div class="tm-top-bar-bg"></div>
+
+    <div class="tm-top-bar" id="tm-top-bar">
+      <div class="container">
+        <div class="row">
+          <nav class="navbar navbar-expand-lg narbar-light">
+            <a class="navbar-brand mr-auto" href="../index.html">
+              <img src="../img/logo.png" alt="Site logo">
+              Flight Booking
+            </a>
+
+            <button type="button"
+                    id="nav-toggle"
+                    class="navbar-toggler collapsed"
+                    data-toggle="collapse"
+                    data-target="#mainNav">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div id="mainNav" class="collapse navbar-collapse tm-bg-white">
+              <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                  <a class="nav-link external" href="../index.html">Home</a>
+                </li>
+
+                <li class="nav-item">
+                  <a class="nav-link active" href="login.html">Login</a>
+                </li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <section class="login-page">
+      <div class="login-box">
+        <div class="login-icon">
+          <i class="fa fa-plane"></i>
+        </div>
+
+        <h1>Welcome Back</h1>
+
+        <p>
+          Continue with Google through Keycloak.
+        </p>
+
+        <button id="keycloakLoginBtn" class="login-btn" type="button">
+          Continue to login
+        </button>
+
+        <a class="login-small-link" href="../index.html">
+          Back to home
+        </a>
+      </div>
+    </section>
+
+    <footer class="tm-container-outer">
+      <p class="mb-0">
+        Copyright ©
+        <span class="tm-current-year"></span>
+        Flight Booking
+      </p>
+    </footer>
+  </div>
+
+  <script src="../js/jquery-1.11.3.min.js"></script>
+  <script src="../js/popper.min.js"></script>
+  <script src="../js/bootstrap.min.js"></script>
+
+  <script>
+    const keycloakBase = "http://localhost:8080";
+    const realm = "airport-system";
+    const clientId = "airport-frontend";
+   const redirectUri = `${window.location.origin}/pages/callback.html`;
+
+    console.log("LOGIN SCRIPT LOADED:", window.location.href);
+    console.log("LOGIN ORIGIN:", window.location.origin);
+
+    function base64UrlEncode(buffer) {
+      return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+    }
+
+    function randomString(length = 64) {
+      const array = new Uint8Array(length);
+      crypto.getRandomValues(array);
+      return base64UrlEncode(array);
+    }
+
+    async function sha256(text) {
+      const encoder = new TextEncoder();
+      return await crypto.subtle.digest("SHA-256", encoder.encode(text));
+    }
+
+    async function loginWithKeycloak(event) {
+      event.preventDefault();
+
+      console.log("LOGIN FUNCTION STARTED");
+
+      const codeVerifier = randomString(64);
+      const hashed = await sha256(codeVerifier);
+      const codeChallenge = base64UrlEncode(hashed);
+
+      localStorage.setItem("pkce_code_verifier", codeVerifier);
+
+      document.cookie =
+        "pkce_code_verifier=" +
+        encodeURIComponent(codeVerifier) +
+        "; Path=/; Max-Age=300; SameSite=Lax";
+
+      console.log(
+        "PKCE SAVED:",
+        localStorage.getItem("pkce_code_verifier")
+      );
+
+      console.log("COOKIE:", document.cookie);
+
+      const authUrl =
+        `${keycloakBase}/realms/${realm}/protocol/openid-connect/auth?` +
+new URLSearchParams({
+  client_id: clientId,
+  response_type: "code",
+  scope: "openid profile email",
+  redirect_uri: redirectUri,
+  code_challenge: codeChallenge,
+  code_challenge_method: "S256",
+  kc_idp_hint: "google",
+  prompt: "select_account"
+}).toString();
+
+      console.log("REDIRECTING TO:", authUrl);
+
+      window.location.href = authUrl;
+    }
+
+    document
+      .getElementById("keycloakLoginBtn")
+      .addEventListener("click", loginWithKeycloak);
+  </script>
+</body>
+</html>
