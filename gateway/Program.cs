@@ -36,9 +36,13 @@ builder.Services
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer   = true,
-            ValidIssuer      = $"{keycloakBase}/realms/{realm}",
-            ValidateAudience = false,   // frontend client IDs vary; API enforces this
+            // Tokens are issued with the browser-facing Keycloak URL (e.g.
+            // http://localhost:8080) but the gateway resolves Keycloak by its
+            // Docker service name (http://keycloak:8080). The two differ, so
+            // issuer validation is disabled. Signature validation via JWKS
+            // (enforced by options.Authority) is the actual security boundary.
+            ValidateIssuer   = false,
+            ValidateAudience = false,
             ValidateLifetime = true,
             ClockSkew        = TimeSpan.Zero,
         };
