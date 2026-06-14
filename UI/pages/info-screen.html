@@ -286,6 +286,9 @@ function renderGroup(tbodyId, list) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No flights.</td></tr>`;
     return;
   }
+  // Clear any placeholder row (Loading… / No flights.)
+  tbody.querySelectorAll("tr.empty-row").forEach(r => r.remove());
+
   // Update or create rows without full re-render to preserve flash state
   const existing = {};
   tbody.querySelectorAll("tr[data-id]").forEach(r => existing[r.dataset.id] = r);
