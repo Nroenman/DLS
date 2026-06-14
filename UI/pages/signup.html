@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Login - Flight Booking</title>
+  <title>Sign Up - Flight Booking</title>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
   <link rel="stylesheet" href="../font-awesome-4.7.0/css/font-awesome.min.css">
@@ -97,22 +97,6 @@
       text-decoration: none;
     }
 
-    .login-input {
-      width: 100%;
-      padding: 12px 15px;
-      margin-bottom: 14px;
-      border: 1px solid #ccc;
-      border-radius: 0;
-      font-size: 14px;
-      background: #fff;
-      box-sizing: border-box;
-    }
-
-    .login-input:focus {
-      outline: none;
-      border-color: #69c6ba;
-    }
-
     .login-divider {
       display: flex;
       align-items: center;
@@ -128,19 +112,7 @@
       border-bottom: 1px solid #ddd;
     }
 
-    .login-divider span {
-      padding: 0 12px;
-    }
-
-    .login-error {
-      background: #fde8e8;
-      color: #c0392b;
-      padding: 10px 14px;
-      margin-bottom: 14px;
-      font-size: 13px;
-      text-align: left;
-      display: none;
-    }
+    .login-divider span { padding: 0 12px; }
 
     .login-small-link {
       display: block;
@@ -163,25 +135,20 @@
               <img src="../img/logo.png" alt="Site logo">
               Flight Booking
             </a>
-
-            <button type="button"
-                    id="nav-toggle"
-                    class="navbar-toggler collapsed"
-                    data-toggle="collapse"
-                    data-target="#mainNav">
+            <button type="button" id="nav-toggle" class="navbar-toggler collapsed"
+                    data-toggle="collapse" data-target="#mainNav">
               <span class="navbar-toggler-icon"></span>
             </button>
-
             <div id="mainNav" class="collapse navbar-collapse tm-bg-white">
               <ul class="navbar-nav ml-auto">
                 <li class="nav-item">
                   <a class="nav-link external" href="../index.html">Home</a>
                 </li>
                 <li class="nav-item">
-                  <a class="nav-link" href="signup.html">Sign Up</a>
+                  <a class="nav-link active" href="signup.html">Sign Up</a>
                 </li>
                 <li class="nav-item">
-                  <a class="nav-link active" href="login.html">Login</a>
+                  <a class="nav-link" href="login.html">Login</a>
                 </li>
               </ul>
             </div>
@@ -193,26 +160,23 @@
     <section class="login-page">
       <div class="login-box">
         <div class="login-icon">
-          <i class="fa fa-plane"></i>
+          <i class="fa fa-user-plus"></i>
         </div>
 
-        <h1>Welcome Back</h1>
-        <p>Sign in to manage your bookings.</p>
+        <h1>Create Account</h1>
+        <p>Sign up to start booking flights.</p>
 
-        <div id="loginError" class="login-error"></div>
-
-        <input id="loginEmail"    class="login-input" type="email"    placeholder="Email" autocomplete="username" />
-        <input id="loginPassword" class="login-input" type="password" placeholder="Password" autocomplete="current-password" />
-
-        <button id="loginBtn" class="login-btn" type="button">Sign In</button>
+        <button id="googleBtn" class="login-btn" type="button">
+          <i class="fa fa-google"></i>&nbsp; Sign up with Google
+        </button>
 
         <div class="login-divider"><span>or</span></div>
 
-        <button id="googleBtn" class="login-btn-secondary" type="button">
-          <i class="fa fa-google"></i>&nbsp; Continue with Google
+        <button id="emailBtn" class="login-btn-secondary" type="button">
+          <i class="fa fa-envelope"></i>&nbsp; Sign up with Email
         </button>
 
-        <a class="login-small-link" href="signup.html">New here? Create an account</a>
+        <a class="login-small-link" href="login.html">Already have an account? Sign in</a>
         <a class="login-small-link" href="../index.html">Back to home</a>
       </div>
     </section>
@@ -234,71 +198,11 @@
     const realm    = "airport-system";
     const clientId = "airport-frontend";
 
+    // Keycloak's registration page serves its own HTML/assets directly from
+    // port 8080, so we send the browser there rather than through the nginx proxy.
+    const keycloakBase = "http://localhost:8080";
+
     document.querySelector(".tm-current-year").textContent = new Date().getFullYear();
-
-    // ── Username / password (ROPC) ────────────────────────────────────────────
-    // Token endpoint proxied through nginx — same-origin, no CORS issues.
-
-    async function loginWithPassword() {
-      const email    = document.getElementById("loginEmail").value.trim();
-      const password = document.getElementById("loginPassword").value;
-      const errorEl  = document.getElementById("loginError");
-
-      errorEl.style.display = "none";
-
-      if (!email || !password) {
-        errorEl.textContent = "Please enter your email and password.";
-        errorEl.style.display = "block";
-        return;
-      }
-
-      document.getElementById("loginBtn").disabled = true;
-      document.getElementById("loginBtn").textContent = "Signing in…";
-
-      try {
-        const tokenRes = await fetch(`/realms/${realm}/protocol/openid-connect/token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "password",
-            client_id:  clientId,
-            username:   email,
-            password:   password,
-            scope:      "openid profile email"
-          })
-        });
-
-        if (!tokenRes.ok) {
-          const err = await tokenRes.json().catch(() => ({}));
-          throw new Error(err.error_description || "Invalid credentials.");
-        }
-
-        const tokens = await tokenRes.json();
-        localStorage.setItem("access_token",  tokens.access_token);
-        localStorage.setItem("refresh_token", tokens.refresh_token);
-        localStorage.setItem("id_token",      tokens.id_token);
-
-        const userRes = await fetch(`/realms/${realm}/protocol/openid-connect/userinfo`, {
-          headers: { "Authorization": `Bearer ${tokens.access_token}` }
-        });
-        if (userRes.ok) {
-          localStorage.setItem("user_info", JSON.stringify(await userRes.json()));
-        }
-
-        window.location.href = "../index.html";
-
-      } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.style.display = "block";
-        document.getElementById("loginBtn").disabled = false;
-        document.getElementById("loginBtn").textContent = "Sign In";
-      }
-    }
-
-    document.getElementById("loginBtn").addEventListener("click", loginWithPassword);
-    document.addEventListener("keydown", e => { if (e.key === "Enter") loginWithPassword(); });
-
-    // ── Google OAuth (PKCE) ───────────────────────────────────────────────────
 
     function base64UrlEncode(buffer) {
       return btoa(String.fromCharCode(...new Uint8Array(buffer)))
@@ -315,27 +219,32 @@
       return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
     }
 
-    async function loginWithGoogle() {
+    async function startPkceFlow(endpoint) {
       const codeVerifier  = randomString(64);
       const codeChallenge = base64UrlEncode(await sha256(codeVerifier));
       localStorage.setItem("pkce_code_verifier", codeVerifier);
 
       const redirectUri = `${window.location.origin}/pages/callback.html`;
 
-      window.location.href =
-        `/realms/${realm}/protocol/openid-connect/auth?` +
+      return `${keycloakBase}/realms/${realm}/protocol/openid-connect/${endpoint}?` +
         new URLSearchParams({
           client_id:             clientId,
           response_type:         "code",
           scope:                 "openid profile email",
           redirect_uri:          redirectUri,
           code_challenge:        codeChallenge,
-          code_challenge_method: "S256",
-          kc_idp_hint:           "google"
+          code_challenge_method: "S256"
         }).toString();
     }
 
-    document.getElementById("googleBtn").addEventListener("click", loginWithGoogle);
+    document.getElementById("googleBtn").addEventListener("click", async () => {
+      const url = await startPkceFlow("auth");
+      window.location.href = url + "&kc_idp_hint=google";
+    });
+
+    document.getElementById("emailBtn").addEventListener("click", async () => {
+      window.location.href = await startPkceFlow("registrations");
+    });
   </script>
 </body>
 </html>
