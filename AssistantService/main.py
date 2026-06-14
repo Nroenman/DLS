@@ -32,11 +32,17 @@ FLIGHTS_QUERY = """
 }
 """
 
-SYSTEM_PROMPT = """You are a helpful airport assistant. Answer passenger questions
-about flights, gates, and departure/arrival times using only the flight data below.
-Be concise and friendly. If a specific flight cannot be found in the data, say so clearly.
+SYSTEM_PROMPT = """You are a flight information assistant for a private airport management system.
 
-Current flight data:
+Rules you must follow without exception:
+1. Your ONLY source of truth is the live flight data listed below. Ignore everything your training knows about real-world airports, airlines, or routes.
+2. Every flight in the list is real and valid for this system — do not question, correct, or second-guess any flight number, airline name, origin, or destination.
+3. If a passenger asks about a flight that appears in the data, answer using only that data.
+4. If a flight is not in the data, say it is not found in the current schedule. Do not invent details.
+5. Never mention Heathrow, or any airport not present in the data below, as a hub or assumption.
+6. Be concise and friendly.
+
+Live flight schedule:
 {flight_data}"""
 
 model_ready = False
@@ -81,32 +87,63 @@ class ChatResponse(BaseModel):
     reply: str
 
 
-async def _fetch_flights() -> str:
+async def _fetch_flights() -> list[dict]:
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.post(FLIGHT_GRAPHQL_URL, json={"query": FLIGHTS_QUERY})
         resp.raise_for_status()
         data = resp.json()
+    return data.get("data", {}).get("flights", [])
 
-    flights = data.get("data", {}).get("flights", [])
+
+def _filter_flights(message: str, flights: list[dict]) -> list[dict]:
+    """Return only the flights mentioned in the message, or all if the query is general."""
+    msg = message.lower()
+
+    # Exact flight-number match (e.g. "SK123")
+    by_number = [f for f in flights if f["flightNumber"].lower() in msg]
+    if by_number:
+        return by_number
+
+    # Match by origin or destination city/airport token
+    by_place = [
+        f for f in flights
+        if any(token in msg for token in _tokens(f["origin"]))
+        or any(token in msg for token in _tokens(f["destination"]))
+    ]
+    if by_place:
+        return by_place
+
+    return flights  # general query — give everything
+
+
+def _tokens(place: str) -> list[str]:
+    """Lower-case words and IATA codes from a place string."""
+    import re
+    parts = re.split(r"[\s,()]+", place.lower())
+    return [p for p in parts if p]
+
+
+def _format_flights(flights: list[dict]) -> str:
     if not flights:
         return "No flights currently in the system."
-
     lines = []
     for f in flights:
-        gate = f.get("gate")
-        gate_str = f"{gate['terminal']}-{gate['gateNumber']}" if gate else "TBD"
-        delay_str = f" | Delay reason: {f['delayReason']}" if f.get("delayReason") else ""
-        actual = f.get("actualDeparture") or f.get("actualArrival")
-        actual_str = f" | Actual: {actual}" if actual else ""
+        gate  = f.get("gate")
+        gate_str  = f"Terminal {gate['terminal']} Gate {gate['gateNumber']}" if gate else "TBD"
+        delay_str = f"\n  Delay reason: {f['delayReason']}" if f.get("delayReason") else ""
+        actual    = f.get("actualDeparture") or f.get("actualArrival")
+        actual_str = f"\n  Actual time: {actual}" if actual else ""
         lines.append(
-            f"{f['flightNumber']} ({f['airline']}) | {f['direction']} | "
-            f"{f['origin']} → {f['destination']} | "
-            f"Scheduled: {f['scheduledDeparture']} | "
-            f"Status: {f['status']} | Gate: {gate_str}"
+            f"- Flight {f['flightNumber']} operated by {f['airline']}\n"
+            f"  From: {f['origin']}\n"
+            f"  To:   {f['destination']}\n"
+            f"  Direction: {f['direction']}\n"
+            f"  Scheduled: {f['scheduledDeparture']}\n"
+            f"  Status: {f['status']}\n"
+            f"  Gate: {gate_str}"
             f"{actual_str}{delay_str}"
         )
-
-    return "\n".join(lines)
+    return "\n\n".join(lines)
 
 
 @app.get("/assistant/health")
@@ -120,7 +157,9 @@ async def chat(req: ChatRequest):
         return ChatResponse(reply="I'm still loading — please try again in a moment.")
 
     try:
-        flight_data = await _fetch_flights()
+        all_flights = await _fetch_flights()
+        relevant    = _filter_flights(req.message, all_flights)
+        flight_data = _format_flights(relevant)
     except Exception:
         flight_data = "Flight data is temporarily unavailable."
 
