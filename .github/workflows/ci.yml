@@ -196,7 +196,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: integration-test-results
           path: TestResults/*.trx
@@ -304,34 +304,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Create stub kubeconfig (--dry-run=client needs no server connection)
+      - name: Install kubeconform
         run: |
-          kubectl config set-cluster ci --server=https://127.0.0.1:6443 --insecure-skip-tls-verify=true
-          kubectl config set-credentials ci-user
-          kubectl config set-context ci --cluster=ci --user=ci-user
-          kubectl config use-context ci
+          VERSION=$(curl -s https://api.github.com/repos/yannh/kubeconform/releases/latest \
+            | jq -r .tag_name)
+          curl -sL "https://github.com/yannh/kubeconform/releases/download/${VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar xz kubeconform
+          sudo mv kubeconform /usr/local/bin/
 
       - name: Validate manifests
         run: |
-          PASS=0; FAIL=0
-          # Only files that look like k8s manifests (have apiVersion + kind)
-          while IFS= read -r f; do
-            if grep -q "^apiVersion:" "$f" && grep -q "^kind:" "$f"; then
-              if kubectl apply --dry-run=client --validate=false -f "$f" > /dev/null 2>&1; then
-                echo "  OK  $f"
-                PASS=$((PASS+1))
-              else
-                echo " FAIL $f"
-                kubectl apply --dry-run=client --validate=false -f "$f" || true
-                FAIL=$((FAIL+1))
-              fi
-            fi
-          done < <(find k8s -name "*.yaml" | sort)
+          find k8s -name "*.yaml" \
+            | grep -v '\-values\.yaml$' \
+            | sort \
+            | xargs kubeconform \
+                -ignore-missing-schemas \
+                -strict \
+                -summary \
+                -output pretty
 
-          echo ""
-          echo "Results: ${PASS} passed, ${FAIL} failed"
-          [ "$FAIL" -eq 0 ]
