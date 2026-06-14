@@ -22,34 +22,6 @@ namespace AirportSystem.Flights.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("AirportSystem.Flights.Models.Booking", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("BookedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("FlightId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SeatNumber")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FlightId");
-
-                    b.HasIndex("UserId", "FlightId")
-                        .IsUnique();
-
-                    b.ToTable("Bookings");
-                });
-
             modelBuilder.Entity("AirportSystem.Flights.Models.Flight", b =>
                 {
                     b.Property<Guid>("Id")
@@ -188,10 +160,6 @@ namespace AirportSystem.Flights.Migrations
                     b.Property<DateTime>("LastSeenAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("text");
@@ -210,25 +178,6 @@ namespace AirportSystem.Flights.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("AirportSystem.Flights.Models.Booking", b =>
-                {
-                    b.HasOne("AirportSystem.Flights.Models.Flight", "Flight")
-                        .WithMany("Bookings")
-                        .HasForeignKey("FlightId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("AirportSystem.Flights.Models.User", "User")
-                        .WithMany("Bookings")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Flight");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AirportSystem.Flights.Models.Flight", b =>
@@ -262,8 +211,6 @@ namespace AirportSystem.Flights.Migrations
 
             modelBuilder.Entity("AirportSystem.Flights.Models.Flight", b =>
                 {
-                    b.Navigation("Bookings");
-
                     b.Navigation("Followers");
                 });
 
@@ -274,8 +221,6 @@ namespace AirportSystem.Flights.Migrations
 
             modelBuilder.Entity("AirportSystem.Flights.Models.User", b =>
                 {
-                    b.Navigation("Bookings");
-
                     b.Navigation("FollowedFlights");
                 });
 #pragma warning restore 612, 618

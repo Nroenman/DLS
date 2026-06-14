@@ -1,0 +1,74 @@
+grafana:
+  enabled: true
+  adminPassword: admin
+
+  service:
+    type: NodePort
+    nodePort: 30300
+
+  # Loki log datasource — available once loki-stack is installed
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki:3100
+      access: proxy
+
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: airport
+          orgId: 1
+          folder: Airport System
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/airport
+
+  # Dashboards auto-provisioned from grafana.com
+  dashboards:
+    airport:
+      node-exporter:
+        gnetId: 1860
+        revision: 37
+        datasource: Prometheus
+      kubernetes-cluster:
+        gnetId: 7249
+        revision: 1
+        datasource: Prometheus
+      rabbitmq:
+        gnetId: 10991
+        revision: 11
+        datasource: Prometheus
+      postgresql:
+        gnetId: 9628
+        revision: 7
+        datasource: Prometheus
+      # aspnet-core dashboard replaced by custom airport-system.json ConfigMap
+      # (gnetId 10427 uses prometheus-net v2/v3 metric names which don't match
+      #  the microsoft_aspnetcore_* names emitted by prometheus-net v8)
+
+prometheus:
+  prometheusSpec:
+    # Pick up ServiceMonitors from all namespaces (airport, baggage, etc.)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    retention: 7d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+
+# Disable alertmanager — not needed for a demo
+alertmanager:
+  enabled: false
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true

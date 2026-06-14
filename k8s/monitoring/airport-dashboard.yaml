@@ -1,0 +1,224 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airport-system-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  airport-system.json: |
+    {
+      "title": "Airport System — Services",
+      "uid": "airport-services",
+      "description": "RED metrics + runtime health for flight, booking, and gateway services",
+      "tags": ["airport", "dotnet", "aspnetcore"],
+      "timezone": "browser",
+      "schemaVersion": 38,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "query",
+            "label": "Service",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": "label_values(microsoft_aspnetcore_hosting_total_requests, job)",
+            "multi": true,
+            "includeAll": true,
+            "current": { "value": "$__all", "text": "All" },
+            "refresh": 2
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Request Rate (req/s)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": { "lineWidth": 2, "fillOpacity": 10 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(microsoft_aspnetcore_hosting_total_requests{job=~\"$service\"}[2m])) by (job)",
+              "legendFormat": "{{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ],
+          "options": { "tooltip": { "mode": "multi" } }
+        },
+        {
+          "id": 2,
+          "title": "Error Rate (5xx / failed req/s)",
+          "type": "timeseries",
+          "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "color": { "mode": "palette-classic" },
+              "custom": { "lineWidth": 2, "fillOpacity": 10 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(microsoft_aspnetcore_hosting_failed_requests{job=~\"$service\"}[2m])) by (job)",
+              "legendFormat": "{{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Request Duration — P50 / P99 (seconds)",
+          "type": "timeseries",
+          "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": { "lineWidth": 2, "fillOpacity": 5 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(microsoft_aspnetcore_hosting_http_server_request_duration_bucket{job=~\"$service\"}[2m])) by (le, job))",
+              "legendFormat": "p50 {{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(microsoft_aspnetcore_hosting_http_server_request_duration_bucket{job=~\"$service\"}[2m])) by (le, job))",
+              "legendFormat": "p99 {{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Active Requests (in-flight)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 8, "w": 6, "h": 7 },
+          "fieldConfig": {
+            "defaults": { "unit": "short", "custom": { "lineWidth": 2 } }
+          },
+          "targets": [
+            {
+              "expr": "microsoft_aspnetcore_hosting_current_requests{job=~\"$service\"}",
+              "legendFormat": "{{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Kestrel Active Connections",
+          "type": "timeseries",
+          "gridPos": { "x": 6, "y": 8, "w": 6, "h": 7 },
+          "fieldConfig": {
+            "defaults": { "unit": "short", "custom": { "lineWidth": 2 } }
+          },
+          "targets": [
+            {
+              "expr": "microsoft_aspnetcore_server_kestrel_current_connections{job=~\"$service\"}",
+              "legendFormat": "{{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "Process Memory — Working Set",
+          "type": "timeseries",
+          "gridPos": { "x": 12, "y": 8, "w": 6, "h": 7 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decmbytes",
+              "custom": { "lineWidth": 2, "fillOpacity": 10 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "system_runtime_dotnet_process_memory_working_set{job=~\"$service\"}",
+              "legendFormat": "{{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "title": "GC Collections / sec",
+          "type": "timeseries",
+          "gridPos": { "x": 18, "y": 8, "w": 6, "h": 7 },
+          "fieldConfig": {
+            "defaults": { "unit": "ops", "custom": { "lineWidth": 2 } }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(system_runtime_dotnet_gc_collections{job=~\"$service\"}[2m])) by (job)",
+              "legendFormat": "{{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "title": "Npgsql — DB Connections (used / max)",
+          "type": "timeseries",
+          "gridPos": { "x": 0, "y": 15, "w": 8, "h": 7 },
+          "fieldConfig": {
+            "defaults": { "unit": "short", "custom": { "lineWidth": 2 } }
+          },
+          "targets": [
+            {
+              "expr": "npgsql_db_client_connections_usage{job=~\"$service\", state=\"used\"}",
+              "legendFormat": "used — {{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            },
+            {
+              "expr": "npgsql_db_client_connections_max{job=~\"$service\"}",
+              "legendFormat": "max — {{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "title": "Thread Pool Queue Length",
+          "type": "timeseries",
+          "gridPos": { "x": 8, "y": 15, "w": 8, "h": 7 },
+          "fieldConfig": {
+            "defaults": { "unit": "short", "custom": { "lineWidth": 2 } }
+          },
+          "targets": [
+            {
+              "expr": "system_runtime_dotnet_thread_pool_queue_length{job=~\"$service\"}",
+              "legendFormat": "{{job}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "title": "Pod Restarts (airport namespace)",
+          "type": "timeseries",
+          "gridPos": { "x": 16, "y": 15, "w": 8, "h": 7 },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "color": { "fixedColor": "orange", "mode": "fixed" },
+              "custom": { "lineWidth": 2 }
+            }
+          },
+          "targets": [
+            {
+              "expr": "increase(kube_pod_container_status_restarts_total{namespace=\"airport\"}[1h])",
+              "legendFormat": "{{pod}}",
+              "datasource": { "type": "prometheus", "uid": "prometheus" }
+            }
+          ]
+        }
+      ]
+    }

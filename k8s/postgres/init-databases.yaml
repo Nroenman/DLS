@@ -1,0 +1,1 @@
+# Shared init script removed — each postgres pod creates its own database via POSTGRES_DB in its credentials secret.

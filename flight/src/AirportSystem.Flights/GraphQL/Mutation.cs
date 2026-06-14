@@ -1,11 +1,11 @@
 using AirportSystem.Flights.Extensions;
-using AirportSystem.Flights.GraphQL.Inputs.Auth;
 using AirportSystem.Flights.GraphQL.Inputs.Flights;
 using AirportSystem.Flights.GraphQL.Inputs.Gates;
 using AirportSystem.Flights.GraphQL.Payloads;
 using AirportSystem.Flights.Services.Auth;
 using AirportSystem.Flights.Services.Flights;
 using AirportSystem.Flights.Services.Gates;
+using AirportSystem.Flights.Services.Messaging;
 using HotChocolate.Authorization;
 using HotChocolate.Subscriptions;
 
@@ -13,37 +13,6 @@ namespace AirportSystem.Flights.GraphQL;
 
 public class Mutation
 {
-    // ── Auth ──────────────────────────────────────────────────────────────────
-
-    [GraphQLDescription(
-        "Register a new user account. Keycloak creates the user and assigns the requested role.")]
-    public async Task<AuthPayload> Register(
-        RegisterInput input,
-        [Service] IKeycloakService keycloakService)
-    {
-        var tokenResponse = await keycloakService.RegisterAsync(
-            input.Username, input.Email, input.Password, input.Role);
-
-        return new AuthPayload(
-            tokenResponse.AccessToken,
-            tokenResponse.RefreshToken,
-            tokenResponse.ExpiresIn);
-    }
-
-    [GraphQLDescription(
-        "Log in with email and password. Returns a Keycloak JWT to use as Bearer token.")]
-    public async Task<AuthPayload> Login(
-        LoginInput input,
-        [Service] IKeycloakService keycloakService)
-    {
-        var tokenResponse = await keycloakService.LoginAsync(input.Email, input.Password);
-
-        return new AuthPayload(
-            tokenResponse.AccessToken,
-            tokenResponse.RefreshToken,
-            tokenResponse.ExpiresIn);
-    }
-
     // ── Flights ───────────────────────────────────────────────────────────────
 
     [Authorize(Roles = new[] { "Admin", "Staff" })]
@@ -77,6 +46,8 @@ public class Mutation
 
         await eventSender.SendAsync(
             $"{nameof(Subscription.OnFlightUpdated)}_{flight.Id}", flight);
+
+        await eventSender.SendAsync(nameof(Subscription.OnAnyFlightUpdated), flight);
 
         return new FlightPayload(flight);
     }
@@ -143,9 +114,15 @@ public class Mutation
     [GraphQLDescription("(Staff/Admin) Assign a flight to a gate.")]
     public async Task<GatePayload> AssignGate(
         AssignGateInput input,
-        [Service] IGateService gateService)
+        [Service] IGateService gateService,
+        [Service] IFlightService flightService,
+        [Service] ITopicEventSender eventSender,
+        [Service] IFlightEventPublisher eventPublisher)
     {
         var gate = await gateService.AssignFlightToGateAsync(input.GateId, input.FlightId);
+        var flight = await flightService.GetFlightByIdAsync(input.FlightId);
+        await eventSender.SendAsync(nameof(Subscription.OnAnyFlightUpdated), flight);
+        eventPublisher.PublishFlightUpdated(flight);
         return new GatePayload(gate);
     }
 
@@ -153,9 +130,15 @@ public class Mutation
     [GraphQLDescription("(Staff/Admin) Release a gate by removing the flight's gate assignment.")]
     public async Task<GatePayload> ReleaseGate(
         ReleaseGateInput input,
-        [Service] IGateService gateService)
+        [Service] IGateService gateService,
+        [Service] IFlightService flightService,
+        [Service] ITopicEventSender eventSender,
+        [Service] IFlightEventPublisher eventPublisher)
     {
         var gate = await gateService.ReleaseGateFromFlightAsync(input.FlightId);
+        var flight = await flightService.GetFlightByIdAsync(input.FlightId);
+        await eventSender.SendAsync(nameof(Subscription.OnAnyFlightUpdated), flight);
+        eventPublisher.PublishFlightUpdated(flight);
         return new GatePayload(gate);
     }
 }

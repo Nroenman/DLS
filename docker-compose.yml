@@ -73,6 +73,7 @@ services:
       retries: 30
       start_period: 60s
 
+
   # ── Services ──────────────────────────────────────────────────────────────────
 
   flight:
@@ -84,11 +85,6 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=airport_system;Username=postgres;Password=postgres"
-      Keycloak__BaseUrl: "http://keycloak:8080"
-      Keycloak__Realm: "airport-system"
-      Keycloak__ClientId: "airport-api"
-      Keycloak__ClientSecret: "airport-api-secret"
-      Keycloak__FrontendClientId: "airport-frontend"
       RabbitMQ__Host: "rabbitmq"
       RabbitMQ__Port: "5672"
       RabbitMQ__Username: "guest"
@@ -171,17 +167,17 @@ services:
     container_name: airport_payment
     restart: unless-stopped
     ports:
-      - "${PAYMENT_PORT}:3000"
+      - "3000:3000"
     environment:
-      PORT: "${PAYMENT_INTERNAL_PORT}"
-      RABBITMQ_URL: "amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:${RABBITMQ_PORT}"
-      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY}"
-      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET}"
-      DB_HOST: "${DB_HOST}"
-      DB_PORT: "${DB_PORT}"
-      DB_USER: "${DB_USER}"
-      DB_PASSWORD: "${DB_PASSWORD}"
-      DB_NAME: "${DB_NAME}"
+      PORT: "3000"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-sk_test_dummy}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      DB_HOST: "mysql"
+      DB_PORT: "3306"
+      DB_USER: "root"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}"
+      DB_NAME: "${MYSQL_DATABASE:-airport_payment}"
     depends_on:
       mysql:
         condition: service_started
@@ -190,8 +186,8 @@ services:
 
   gateway:
     build:
-      context: ./flight
-      dockerfile: src/AirportSystem.Gateway/Dockerfile
+      context: ./gateway
+      dockerfile: Dockerfile
     container_name: airport_gateway
     restart: unless-stopped
     ports:
@@ -206,6 +202,75 @@ services:
       keycloak:
         condition: service_healthy
 
+  # Baggage runs against its own database, mirroring its isolated k8s namespace.
+  baggage-postgres:
+    image: postgres:16-alpine
+    container_name: airport_baggage_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: baggage_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - baggage_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  baggage:
+    build:
+      context: ./BaggageAPI
+      dockerfile: dockerfile
+    container_name: airport_baggage
+    restart: unless-stopped
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=baggage-postgres;Port=5432;Database=baggage_db;Username=postgres;Password=postgres"
+      RabbitMQ__Host: "rabbitmq"
+    depends_on:
+      baggage-postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: airport_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  assistant:
+    build:
+      context: ./AssistantService
+    container_name: airport_assistant
+    restart: unless-stopped
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5:3b
+      FLIGHT_GRAPHQL_URL: http://flight:8080/graphql
+    depends_on:
+      ollama:
+        condition: service_healthy
+      flight:
+        condition: service_started
+
 volumes:
   postgres_data:
+  baggage_postgres_data:
   mysql_data:
+  ollama_data:

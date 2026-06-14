@@ -1,14 +1,45 @@
-*.cache
-*.user
-obj/
-bin/
-.idea/
-*.sln.DotSettings.user
-BaggageAPI/obj/rider.project.restore.info
+# .NET build output
+**/bin/
+**/obj/
+**/publish/
+**/TestResults/
+**/*.user
+**/*.suo
+**/*.sln.DotSettings.user
 *.info
+
+# Rider / IntelliJ
+**/.idea/
+
+# Visual Studio
+**/.vs/
 *.cache
-node_modules/
+
+# VS Code
+**/.vscode/
+
+# Node
 **/node_modules/
+**/dist/
+**/coverage/
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/*.egg-info/
+**/.venv/
+**/venv/
+
+# Environment files
 .env
 .env.*
-.vscode/
+
+# Kubernetes secrets (copy from *.example and fill in real values)
+k8s/secrets.yaml
+k8s/**/secrets.yaml
+
+# OS
+.DS_Store
+Thumbs.db

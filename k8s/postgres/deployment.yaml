@@ -1,0 +1,2 @@
+# Shared postgres removed — each service (flight, booking, keycloak) now has its own postgres pod.
+# See k8s/flight/postgres-*.yaml, k8s/booking/postgres-*.yaml, k8s/keycloak/postgres-*.yaml.
