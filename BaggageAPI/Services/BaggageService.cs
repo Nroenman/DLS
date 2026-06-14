@@ -22,7 +22,7 @@ public class BaggageService(AppDbContext context, IRabbitMqService rabbitMq) : I
             CreatedAt = DateTime.UtcNow
         };
 
-        context.Baggages.Add(baggage);
+        _context.Baggages.Add(baggage);
         await _context.SaveChangesAsync(); 
 
         _rabbitMq.Publish("baggagequeue", new

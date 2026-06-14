@@ -9,7 +9,7 @@ public class Baggage
     public double Weight { get; set; }
 
     public BaggageStatus Status { get; set; }
-    public string CurrentLocation { get; set; }
+    public required string CurrentLocation { get; set; }
 
     public DateTime CreatedAt { get; set; }
 } 
