@@ -9,6 +9,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
       MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_ROOT_HOST: "%"
     ports:
       - "${MYSQL_EXTERNAL_PORT}:3306"
     volumes:
@@ -49,7 +50,7 @@ services:
     image: quay.io/keycloak/keycloak:23.0
     container_name: airport_keycloak
     restart: unless-stopped
-    command: start-dev --import-realm --health-enabled=true
+    entrypoint: ["/bin/sh", "/realm-init/import-realm.sh"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,7 +66,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./keycloak/airport-realm.json:/opt/keycloak/data/import/airport-realm.json:ro
+      - ./keycloak/import-realm.sh:/realm-init/import-realm.sh:ro
+      - ./keycloak/airport-realm.json.template:/realm-init/airport-realm.json.template:ro
     healthcheck:
       test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; cat <&3 | grep -q '\"status\": \"UP\"'" ]
       interval: 10s
@@ -178,6 +180,7 @@ services:
       DB_USER: "root"
       DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}"
       DB_NAME: "${MYSQL_DATABASE:-airport_payment}"
+      UI_BASE_URL: "${UI_BASE_URL:-http://localhost}"
     depends_on:
       mysql:
         condition: service_started
@@ -201,26 +204,6 @@ services:
         condition: service_started
       keycloak:
         condition: service_healthy
-
-  # Baggage runs against its own database, mirroring its isolated k8s namespace.
-  baggage-postgres:
-    image: postgres:16-alpine
-    container_name: airport_baggage_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: baggage_db
-    ports:
-      - "5433:5432"
-    volumes:
-      - baggage_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 
   ollama:
     image: ollama/ollama:latest
@@ -252,8 +235,20 @@ services:
       flight:
         condition: service_started
 
+  ui:
+    build:
+      context: ./UI
+    container_name: airport_ui
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      KEYCLOAK_URL: "http://localhost:8080"
+    depends_on:
+      gateway:
+        condition: service_started
+
 volumes:
   postgres_data:
-  baggage_postgres_data:
   mysql_data:
   ollama_data:
