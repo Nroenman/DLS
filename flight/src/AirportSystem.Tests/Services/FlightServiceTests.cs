@@ -29,24 +29,11 @@ public class FlightServiceTests
 
         var flight = await service.CreateFlightAsync(
             "SK101", "SAS", "CPH", "LHR",
-            Future(2), Future(4), FlightDirection.Departure);
+            Future(2), FlightDirection.Departure);
 
         flight.Should().NotBeNull();
         flight.FlightNumber.Should().Be("SK101");
         flight.Status.Should().Be(FlightStatus.Scheduled);
-    }
-
-    [Fact]
-    public async Task CreateFlight_ArrivalBeforeDeparture_ThrowsArgumentException()
-    {
-        var (service, _, _) = Setup();
-
-        var act = async () => await service.CreateFlightAsync(
-            "SK202", "SAS", "CPH", "LHR",
-            Future(4), Future(2), FlightDirection.Departure);
-
-        await act.Should().ThrowAsync<ArgumentException>()
-            .WithMessage("*Arrival must be after departure*");
     }
 
     [Fact]
@@ -57,7 +44,7 @@ public class FlightServiceTests
 
         var flight = await service.CreateFlightAsync(
             "SK303", "SAS", "CPH", "OSL",
-            Future(1), Future(3), FlightDirection.Departure, gate.Id);
+            Future(1), FlightDirection.Departure, gate.Id);
 
         flight.GateId.Should().Be(gate.Id);
     }
@@ -69,7 +56,7 @@ public class FlightServiceTests
 
         var act = async () => await service.CreateFlightAsync(
             "SK404", "SAS", "CPH", "AMS",
-            Future(1), Future(3), FlightDirection.Departure, Guid.NewGuid());
+            Future(1), FlightDirection.Departure, Guid.NewGuid());
 
         await act.Should().ThrowAsync<KeyNotFoundException>()
             .WithMessage("*Gate*not found*");
