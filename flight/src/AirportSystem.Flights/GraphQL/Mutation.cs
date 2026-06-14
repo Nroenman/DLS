@@ -15,8 +15,7 @@ public class Mutation
 {
     // ── Flights ───────────────────────────────────────────────────────────────
 
-    [Authorize(Roles = new[] { "Admin", "Staff" })]
-    [GraphQLDescription("(Staff/Admin) Create a new flight.")]
+    [GraphQLDescription("Create a new flight.")]
     public async Task<FlightPayload> CreateFlight(
         CreateFlightInput input,
         [Service] IFlightService flightService,
