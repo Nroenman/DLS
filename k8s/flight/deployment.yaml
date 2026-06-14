@@ -5,6 +5,11 @@ metadata:
   namespace: airport
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: flight
@@ -16,7 +21,7 @@ spec:
       initContainers:
         - name: wait-for-postgres
           image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z postgres 5432; do echo "waiting for postgres..."; sleep 2; done']
+          command: ['sh', '-c', 'until nc -z flight-postgres 5432; do echo "waiting for flight-postgres..."; sleep 2; done']
         - name: wait-for-rabbitmq
           image: busybox:1.35
           command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo "waiting for rabbitmq..."; sleep 2; done']
@@ -34,6 +39,8 @@ spec:
                 name: app-config
             - secretRef:
                 name: app-secrets
+            - secretRef:
+                name: flight-db-secret
           resources:
             requests:
               cpu: 100m

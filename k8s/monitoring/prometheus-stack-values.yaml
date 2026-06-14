@@ -45,11 +45,9 @@ grafana:
         gnetId: 9628
         revision: 7
         datasource: Prometheus
-      aspnet-core:
-        # Requires prometheus-net.AspNetCore in the .NET services
-        gnetId: 10427
-        revision: 15
-        datasource: Prometheus
+      # aspnet-core dashboard replaced by custom airport-system.json ConfigMap
+      # (gnetId 10427 uses prometheus-net v2/v3 metric names which don't match
+      #  the microsoft_aspnetcore_* names emitted by prometheus-net v8)
 
 prometheus:
   prometheusSpec:

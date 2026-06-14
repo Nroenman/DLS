@@ -13,9 +13,9 @@ public class RabbitMqService : IDisposable
     {
         var factory = new ConnectionFactory
         {
-            HostName = config["RabbitMQ__Host"] ?? "localhost",
-            UserName = config["RabbitMQ__User"] ?? "guest",
-            Password = config["RabbitMQ__Pass"] ?? "guest"
+            HostName = config["RabbitMQ:Host"] ?? "localhost",
+            UserName = config["RabbitMQ:User"] ?? "guest",
+            Password = config["RabbitMQ:Pass"] ?? "guest"
         };
 
         _connection = factory.CreateConnection();

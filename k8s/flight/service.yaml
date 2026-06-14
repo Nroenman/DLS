@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: flight
   namespace: airport
+  labels:
+    app: flight
 spec:
   selector:
     app: flight

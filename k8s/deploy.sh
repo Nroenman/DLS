@@ -51,9 +51,15 @@ kubectl create configmap keycloak-realm \
 
 # ── 7. Deploy airport namespace ──────────────────────────────────────────────
 echo "==> Deploying airport namespace resources..."
+if [ ! -f "$SCRIPT_DIR/secrets.yaml" ]; then
+  echo "ERROR: k8s/secrets.yaml not found."
+  echo "       Copy k8s/secrets.yaml.example, fill in real values, then re-run."
+  exit 1
+fi
 kubectl apply -f "$SCRIPT_DIR/secrets.yaml"
 kubectl apply -f "$SCRIPT_DIR/configmap.yaml"
-kubectl apply -f "$SCRIPT_DIR/postgres/"
+kubectl apply -f "$SCRIPT_DIR/network-policies/airport.yaml"
+kubectl apply -f "$SCRIPT_DIR/mysql/"
 kubectl apply -f "$SCRIPT_DIR/rabbitmq/"
 kubectl apply -f "$SCRIPT_DIR/keycloak/"
 kubectl apply -f "$SCRIPT_DIR/flight/"
@@ -63,21 +69,26 @@ kubectl apply -f "$SCRIPT_DIR/payment/"
 kubectl apply -f "$SCRIPT_DIR/ollama/"
 kubectl apply -f "$SCRIPT_DIR/assistant/"
 kubectl apply -f "$SCRIPT_DIR/gateway/"
-
-# ── 8. Deploy baggage namespace ──────────────────────────────────────────────
-echo "==> Deploying baggage namespace resources..."
 kubectl apply -f "$SCRIPT_DIR/baggage/"
+kubectl apply -f "$SCRIPT_DIR/monitoring/airport-dashboard.yaml"
 
-# ── 9. Print access URLs ─────────────────────────────────────────────────────
+# ── 8. Print access URLs ─────────────────────────────────────────────────────
 MINIKUBE_IP=$(minikube ip)
 echo ""
-echo "==> All resources applied. Access points:"
-echo "    Gateway (API):        http://$MINIKUBE_IP:30500"
+echo "==> All resources applied."
+echo ""
+echo "    ── Via gateway (port 30500) ──────────────────────────────────────────"
+echo "    GraphQL playground:   http://$MINIKUBE_IP:30500/graphql"
+echo "    Booking API:          http://$MINIKUBE_IP:30500/api/Booking/"
+echo "    Payment API:          http://$MINIKUBE_IP:30500/api/payment/"
+echo "    Assistant health:     http://$MINIKUBE_IP:30500/assistant/health"
 echo "    Assistant chat:       http://$MINIKUBE_IP:30500/assistant/chat  (POST)"
+echo ""
+echo "    ── Direct NodePorts ──────────────────────────────────────────────────"
+echo "    Baggage API:          http://$MINIKUBE_IP:30501"
 echo "    Keycloak admin:       http://$MINIKUBE_IP:30880  (admin / admin)"
 echo "    RabbitMQ management:  http://$MINIKUBE_IP:30672  (guest / guest)"
-echo "    Baggage API:          http://$MINIKUBE_IP:30501"
+echo "    Grafana:              http://$MINIKUBE_IP:30300  (admin / admin)"
 echo ""
 echo "==> Watch rollout:"
 echo "    kubectl get pods -n airport -w"
-echo "    kubectl get pods -n baggage -w"

@@ -36,6 +36,10 @@
 .env
 .env.*
 
+# Kubernetes secrets (copy from *.example and fill in real values)
+k8s/secrets.yaml
+k8s/**/secrets.yaml
+
 # OS
 .DS_Store
 Thumbs.db

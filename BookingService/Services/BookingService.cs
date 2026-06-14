@@ -107,19 +107,6 @@ public class BookingService : IBookingService
 
         await _bookingEventPublisher.PublishPaymentMessage(paymentMessage);
 
-        var notificationMessage = new NotificationMessage
-        {
-            FromName = "Airport Booking Service",
-            ToEmail = request.ContactEmail,
-            Subject = "Booking Created",
-            Body =
-                $"<h2>Booking Created</h2>" +
-                $"<p>Your booking with ID {booking.Id} has been created successfully.</p>" +
-                $"<p>Total price: {booking.TotalPrice} DKK</p>"
-        };
-
-        await _bookingEventPublisher.PublishNotificationMessage(notificationMessage);
-
         BookingResponse response = new BookingResponse()
         {
             BookingId = booking.Id,

@@ -5,6 +5,8 @@ metadata:
   namespace: airport
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: rabbitmq
@@ -23,6 +25,13 @@ spec:
           envFrom:
             - secretRef:
                 name: rabbitmq-credentials
+          resources:
+            requests:
+              cpu: 150m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           volumeMounts:
             - name: plugins
               mountPath: /etc/rabbitmq/enabled_plugins

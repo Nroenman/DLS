@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: rabbitmq
   namespace: airport
+  labels:
+    app: rabbitmq
 spec:
   selector:
     app: rabbitmq

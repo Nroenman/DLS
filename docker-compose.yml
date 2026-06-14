@@ -167,17 +167,17 @@ services:
     container_name: airport_payment
     restart: unless-stopped
     ports:
-      - "${PAYMENT_PORT}:3000"
+      - "3000:3000"
     environment:
-      PORT: "${PAYMENT_INTERNAL_PORT}"
-      RABBITMQ_URL: "amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:${RABBITMQ_PORT}"
-      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY}"
-      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET}"
-      DB_HOST: "${DB_HOST}"
-      DB_PORT: "${DB_PORT}"
-      DB_USER: "${DB_USER}"
-      DB_PASSWORD: "${DB_PASSWORD}"
-      DB_NAME: "${DB_NAME}"
+      PORT: "3000"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-sk_test_dummy}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      DB_HOST: "mysql"
+      DB_PORT: "3306"
+      DB_USER: "root"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}"
+      DB_NAME: "${MYSQL_DATABASE:-airport_payment}"
     depends_on:
       mysql:
         condition: service_started
@@ -239,23 +239,6 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  payment:
-    build:
-      context: ./PaymentService
-      dockerfile: Dockerfile
-    container_name: airport_payment
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      PORT: "3000"
-      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672"
-      # Dummy key so the Stripe client constructs; replace to exercise real payments.
-      STRIPE_SECRET_KEY: "sk_test_dummy"
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-
   ollama:
     image: ollama/ollama:latest
     container_name: airport_ollama
@@ -288,4 +271,6 @@ services:
 
 volumes:
   postgres_data:
+  baggage_postgres_data:
   mysql_data:
+  ollama_data:

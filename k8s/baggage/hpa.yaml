@@ -2,7 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: baggage-api
-  namespace: baggage
+  namespace: airport
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

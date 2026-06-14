@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres
-  namespace: baggage
+  name: baggage-postgres
+  namespace: airport
 spec:
   selector:
-    app: postgres
+    app: baggage-postgres
   ports:
     - port: 5432
       targetPort: 5432

@@ -24,6 +24,9 @@
 
     <!-- RabbitMQ -->
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
+
+    <!-- Metrics -->
+    <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
   </ItemGroup>
 
 </Project>

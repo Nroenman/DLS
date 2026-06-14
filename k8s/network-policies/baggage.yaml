@@ -1,0 +1,2 @@
+# Baggage service has been merged into the airport namespace.
+# These policies are now in airport.yaml — this file is no longer applied.

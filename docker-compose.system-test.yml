@@ -1,0 +1,57 @@
+# System-level cooperation test stack.
+# Used by .github/workflows/ci.yml job: system-test
+# Verifies the booking_queue → BookingEventConsumer → Confirmed round-trip.
+#
+# The BookingService image must be pre-built before `docker compose up`:
+#   docker build -t booking-service:system-test -f BookingService/Dockerfile BookingService/
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  booking-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sysuser
+      POSTGRES_PASSWORD: syspassword
+      POSTGRES_DB: SystemTestDb
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sysuser -d SystemTestDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  booking:
+    image: booking-service:system-test
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: >-
+        Host=booking-db;Port=5432;Database=SystemTestDb;
+        Username=sysuser;Password=syspassword
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Port: "5672"
+      RabbitMQ__Username: guest
+      RabbitMQ__Password: guest
+      DisableMessaging: "false"
+      # Keycloak is not needed for the system test — no auth-protected endpoints are called
+      Keycloak__AuthServerUrl: "http://keycloak-placeholder:8080/"
+      Keycloak__Realm: airport
+      Keycloak__Resource: booking-service
+      Keycloak__Credentials__Secret: placeholder
+    ports:
+      - "5001:8080"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      booking-db:
+        condition: service_healthy

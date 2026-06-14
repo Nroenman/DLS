@@ -11,8 +11,8 @@ namespace AirportSystem.Flights.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Bookings");
+            // Passengers has a FK to Bookings; CASCADE drops that constraint along with the table.
+            migrationBuilder.Sql("DROP TABLE IF EXISTS \"Bookings\" CASCADE;");
 
             migrationBuilder.DropColumn(
                 name: "PasswordHash",

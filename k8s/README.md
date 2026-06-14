@@ -15,6 +15,8 @@ Runs the full Airport System on a local minikube cluster — a close mirror of t
 
 - kubectl
 
+- helm
+
 ---
 
 ## First-time setup

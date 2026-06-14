@@ -5,6 +5,11 @@ metadata:
   namespace: airport
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: keycloak
@@ -16,7 +21,7 @@ spec:
       initContainers:
         - name: wait-for-postgres
           image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z postgres 5432; do echo "waiting for postgres..."; sleep 2; done']
+          command: ['sh', '-c', 'until nc -z keycloak-postgres 5432; do echo "waiting for keycloak-postgres..."; sleep 2; done']
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:23.0
@@ -27,7 +32,7 @@ spec:
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL
-              value: jdbc:postgresql://postgres:5432/airport_system
+              value: jdbc:postgresql://keycloak-postgres:5432/keycloak_db
           envFrom:
             - secretRef:
                 name: keycloak-credentials
@@ -50,8 +55,10 @@ spec:
             failureThreshold: 5
           resources:
             requests:
+              cpu: 200m
               memory: 512Mi
             limits:
+              cpu: 1000m
               memory: 1Gi
       volumes:
         - name: realm-config

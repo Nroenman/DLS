@@ -2,8 +2,3 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: airport
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: baggage

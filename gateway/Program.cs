@@ -1,3 +1,4 @@
+using Prometheus;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Json;
@@ -115,5 +116,6 @@ app.Use(async (context, next) =>
 });
 
 app.MapReverseProxy();
+app.MapMetrics();
 
 app.Run();
