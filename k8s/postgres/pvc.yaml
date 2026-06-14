@@ -1,0 +1,1 @@
+# Shared postgres removed — see k8s/flight/postgres-pvc.yaml, k8s/booking/postgres-pvc.yaml, k8s/keycloak/postgres-pvc.yaml.

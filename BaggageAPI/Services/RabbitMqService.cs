@@ -1,11 +1,11 @@
 ﻿using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
+using BaggageAPI.Interfaces;
 
 namespace BaggageAPI.Services;
 
-public class RabbitMqService : IDisposable
-{
+public class RabbitMqService : IRabbitMqService, IDisposable{
     private readonly IConnection _connection;
     private readonly IModel _channel;
 
@@ -13,17 +13,16 @@ public class RabbitMqService : IDisposable
     {
         var factory = new ConnectionFactory
         {
-            HostName = config["RabbitMQ__Host"] ?? "localhost",
-            UserName = config["RabbitMQ__User"] ?? "guest",
-            Password = config["RabbitMQ__Pass"] ?? "guest"
+            HostName = config["RabbitMQ:Host"] ?? "localhost",
+            UserName = config["RabbitMQ:User"] ?? "guest",
+            Password = config["RabbitMQ:Pass"] ?? "guest"
         };
 
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
     }
 
-    public void Publish(string queueName, object message)
-    {
+public virtual void Publish(string queueName, object message)    {
         _channel.QueueDeclare(
             queue: queueName,
             durable: true,
@@ -35,7 +34,7 @@ public class RabbitMqService : IDisposable
         var body = Encoding.UTF8.GetBytes(json);
 
         var properties = _channel.CreateBasicProperties();
-        properties.Persistent = true; // 👈 messages survive a RabbitMQ restart
+        properties.Persistent = true; 
 
         _channel.BasicPublish(
             exchange: "",

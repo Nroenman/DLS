@@ -24,4 +24,13 @@ public class Subscription
     public Flight OnFlightUpdated(
         Guid flightId,
         [EventMessage] Flight flight) => flight;
+
+    /// <summary>
+    /// Fires whenever any flight is updated. Available to all users.
+    /// Intended for public departure/arrival boards.
+    /// </summary>
+    [Subscribe]
+    [Topic(nameof(OnAnyFlightUpdated))]
+    [GraphQLDescription("Subscribe to updates for all flights. Use this for departure/arrival boards.")]
+    public Flight OnAnyFlightUpdated([EventMessage] Flight flight) => flight;
 }

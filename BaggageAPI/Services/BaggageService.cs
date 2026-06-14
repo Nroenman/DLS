@@ -5,12 +5,10 @@ using BaggageAPI.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BaggageAPI.Services;
-
-public class BaggageService(AppDbContext context, RabbitMqService rabbitMq) : IBaggageService
+public class BaggageService(AppDbContext context, IRabbitMqService rabbitMq) : IBaggageService
 {
     private readonly AppDbContext _context = context;
-    private readonly RabbitMqService _rabbitMq = rabbitMq; 
-
+    private readonly IRabbitMqService _rabbitMq = rabbitMq;
     public async Task<Baggage> CreateAsync(CreateBaggageDto dto)
     {
         var baggage = new Baggage
@@ -24,7 +22,7 @@ public class BaggageService(AppDbContext context, RabbitMqService rabbitMq) : IB
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.Baggages.Add(baggage);
+        context.Baggages.Add(baggage);
         await _context.SaveChangesAsync(); 
 
         _rabbitMq.Publish("baggagequeue", new
@@ -40,7 +38,7 @@ public class BaggageService(AppDbContext context, RabbitMqService rabbitMq) : IB
     {
         var baggage = await _context.Baggages.FindAsync(id);
 
-        if (baggage is null) return null; // ✅ Fix 4: null guard
+        if (baggage is null) return null; 
 
         baggage.Status = dto.Status;
         baggage.CurrentLocation = dto.Location;

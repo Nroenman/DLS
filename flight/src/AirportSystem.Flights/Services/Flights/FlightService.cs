@@ -93,7 +93,6 @@ public class FlightService : IFlightService
     {
         return await _db.Flights
             .Include(f => f.Gate)
-            // .Include(f => f.Bookings).ThenInclude(b => b.User)
             .Include(f => f.Followers).ThenInclude(ff => ff.User)
             .FirstOrDefaultAsync(f => f.Id == id)
             ?? throw new KeyNotFoundException($"Flight '{id}' not found.");

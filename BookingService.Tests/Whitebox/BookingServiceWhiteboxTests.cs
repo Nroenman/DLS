@@ -76,8 +76,10 @@ public class BookingServiceWhiteboxTests
     [Fact]
     public void ValidatePassengerCount_WithNullPassengers_ThrowsArgumentException()
     {
+        var request = ValidRequest();
+        request.Passengers = null;
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidatePassengerCount(null));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Number of passengers must be greater than 0", exception.Message);
     }
@@ -95,10 +97,10 @@ public class BookingServiceWhiteboxTests
     [Fact]
     public void ValidatePassengerDetails_WithEmptyFirstName_ThrowsArgumentException()
     {
-        var passengers = ValidPassengerList();
-        passengers[0].FirstName = "";
+        var request = ValidRequest();
+        request.Passengers[0].FirstName = "";
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidatePassengerDetails(passengers));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("First name is required", exception.Message);
     }
@@ -106,10 +108,10 @@ public class BookingServiceWhiteboxTests
     [Fact]
     public void ValidatePassengerDetails_WithEmptyLastName_ThrowsArgumentException()
     {
-        var passengers = ValidPassengerList();
-        passengers[0].LastName = "";
+        var request = ValidRequest();
+        request.Passengers[0].LastName = "";
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidatePassengerDetails(passengers));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Last name is required", exception.Message);
     }
@@ -117,10 +119,10 @@ public class BookingServiceWhiteboxTests
     [Fact]
     public void ValidatePassengerDetails_WithEmptyDateOfBirth_ThrowsArgumentException()
     {
-        var passengers = ValidPassengerList();
-        passengers[0].DateOfBirth = default;
+        var request = ValidRequest();
+        request.Passengers[0].DateOfBirth = default;
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidatePassengerDetails(passengers));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Date of birth is required", exception.Message);
     }
@@ -128,10 +130,10 @@ public class BookingServiceWhiteboxTests
     [Fact]
     public void ValidatePassengerDetails_WithFutureDateOfBirth_ThrowsArgumentException()
     {
-        var passengers = ValidPassengerList();
-        passengers[0].DateOfBirth = new DateTime(2028, 2, 4);
+        var request = ValidRequest();
+        request.Passengers[0].DateOfBirth = new DateTime(2028, 2, 4);
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidatePassengerDetails(passengers));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Date of birth must be in the past", exception.Message);
     }
@@ -139,10 +141,10 @@ public class BookingServiceWhiteboxTests
     [Fact]
     public void ValidatePassengerDetails_WithEmptyPassportNumber_ThrowsArgumentException()
     {
-        var passengers = ValidPassengerList();
-        passengers[0].PassportNumber = "";
+        var request = ValidRequest();
+        request.Passengers[0].PassportNumber = "";
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidatePassengerDetails(passengers));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Passport number is required", exception.Message);
     }
@@ -150,10 +152,10 @@ public class BookingServiceWhiteboxTests
     [Fact]
     public void ValidatePassengerDetails_WithEmptyNationality_ThrowsArgumentException()
     {
-        var passengers = ValidPassengerList();
-        passengers[0].Nationality = "";
+        var request = ValidRequest();
+        request.Passengers[0].Nationality = "";
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidatePassengerDetails(passengers));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Nationality is required", exception.Message);
     }
@@ -174,7 +176,7 @@ public class BookingServiceWhiteboxTests
         var request = ValidRequest();
         request.FlightId = "";
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidateFlightInfo(request));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Flight ID is required", exception.Message);
     }
@@ -195,7 +197,7 @@ public class BookingServiceWhiteboxTests
         var request = ValidRequest();
         request.SeatClass = null;
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidateBookingDetails(request));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Seat class is required", exception.Message);
     }
@@ -206,7 +208,7 @@ public class BookingServiceWhiteboxTests
         var request = ValidRequest();
         request.TicketPrice = 0;
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidateBookingDetails(request));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Ticket price must be greater than 0", exception.Message);
     }
@@ -217,18 +219,18 @@ public class BookingServiceWhiteboxTests
         var request = ValidRequest();
         request.ContactEmail = "";
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidateBookingDetails(request));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Contact email is required", exception.Message);
     }
-    
+
     [Fact]
     public void ValidateBookingDetails_WithInvalidEmailFormat_ThrowsArgumentException()
     {
         var request = ValidRequest();
         request.ContactEmail = "notvalid@email";
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidateBookingDetails(request));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Contact email format is invalid", exception.Message);
     }
@@ -239,7 +241,7 @@ public class BookingServiceWhiteboxTests
         var request = ValidRequest();
         request.ContactPhone = "";
         var exception = Assert.Throws<ArgumentException>(() =>
-            _bookingValidator.ValidateBookingDetails(request));
+            _bookingValidator.ValidateCreateBooking(request));
 
         Assert.Equal("Contact phone number is required", exception.Message);
     }
@@ -262,7 +264,7 @@ public class BookingServiceWhiteboxTests
 
         Assert.Equal("User ID is required", exception.Message);
     }
-    
+
     //Update booking status
     [Fact]
     public void ValidateUpdateBookingStatus_WithInvalidStatus_ThrowsArgumentException()
@@ -272,18 +274,18 @@ public class BookingServiceWhiteboxTests
 
         Assert.Equal("Invalid booking status", exception.Message);
     }
-    
-    //Birthday not happened 
+
+    //Birthday not happened
     [Fact]
     public async Task CreateBookingAsync_WithPassengerBirthdayNotYetOccurredThisYear_ReturnsChildDiscount()
     {
         var request = ValidRequest();
-        request.Passengers[0].DateOfBirth = new  DateTime(2015, 12, 24);
+        request.Passengers[0].DateOfBirth = new DateTime(2015, 12, 24);
         var response = await _bookingService.CreateBookingAsync(request, "testuser");
-        
+
         Assert.Equal(500, response.TotalPrice);
     }
-    
+
     //Cancel booking
     [Fact]
     public void ValidateCancelBooking_WithNoBooking_ThrowsArgumentException()
@@ -293,7 +295,7 @@ public class BookingServiceWhiteboxTests
 
         Assert.Equal("Booking not found", exception.Message);
     }
-    
+
     [Fact]
     public void ValidateCancelBooking_WithWrongUserId_ThrowsArgumentException()
     {
@@ -309,7 +311,7 @@ public class BookingServiceWhiteboxTests
 
         Assert.Equal("Not authorized", exception.Message);
     }
-    
+
     [Fact]
     public void ValidateCancelBooking_WithAlreadyCancelledBooking_ThrowsArgumentException()
     {
@@ -325,7 +327,7 @@ public class BookingServiceWhiteboxTests
 
         Assert.Equal("Booking is already cancelled", exception.Message);
     }
-    
+
     [Fact]
     public void ValidateCancelBooking_WithValidBooking_DoesNotThrow()
     {
@@ -341,7 +343,7 @@ public class BookingServiceWhiteboxTests
 
         Assert.Null(exception);
     }
-    
+
     //Pricing
     [Fact]
     public async Task CreateBooking_WhenPricingIsNull_ThrowsInvalidOperationException()

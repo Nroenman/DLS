@@ -1,0 +1,337 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AirportSystem CI Pipeline
+#
+# Prerequisites (set in repo Settings → Secrets / Variables):
+#   Secrets  : SONAR_TOKEN
+#   Variables: SONAR_PROJECT_KEY, SONAR_ORGANIZATION
+#
+# Stages:
+#   1. static-analysis  – SonarCloud scan (fails on quality-gate breach)
+#   2. unit-tests        – dotnet test (no infrastructure) + npm test
+#   3. integration-tests – dotnet test (Integration filter) with live PG + RabbitMQ
+#   4. system-test       – full booking→queue→Confirmed round-trip in containers
+#   5. build-and-push    – Docker build for every service; push to GHCR on main
+#   6. k8s-validate      – kubectl --dry-run=client over all k8s manifests
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+# ── 1. STATIC ANALYSIS ────────────────────────────────────────────────────────
+jobs:
+  static-analysis:
+    name: Static Analysis (SonarCloud)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # SonarCloud needs full history for blame
+
+      - name: Setup Java (SonarCloud scanner dependency)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Install SonarCloud scanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Cache SonarCloud analysis cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: sonar-${{ runner.os }}-${{ github.ref_name }}
+          restore-keys: sonar-${{ runner.os }}-
+
+      - name: SonarCloud scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin \
+            /k:"${{ vars.SONAR_PROJECT_KEY }}" \
+            /o:"${{ vars.SONAR_ORGANIZATION }}" \
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
+            /d:sonar.host.url="https://sonarcloud.io" \
+            /d:sonar.exclusions="**/node_modules/**,**/obj/**,**/bin/**" \
+            /d:sonar.test.exclusions="**/*.Tests/**,**/*Test*/**"
+
+          dotnet build BookingService/BookingService.csproj             -c Release --no-incremental
+          dotnet build flight/src/AirportSystem.Flights/AirportSystem.Flights.csproj \
+                                                                         -c Release --no-incremental
+          dotnet build NotificationService/Notification.csproj          -c Release --no-incremental
+          dotnet build gateway/AirportSystem.Gateway.csproj             -c Release --no-incremental
+          dotnet build BaggageAPI/BaggageAPI.csproj                     -c Release --no-incremental
+
+          dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+# ── 2. UNIT TESTS ─────────────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests
+    needs: static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Restore packages
+        run: |
+          dotnet restore BookingService.Tests/BookingService.Tests.csproj
+          dotnet restore flight/src/AirportSystem.Tests/AirportSystem.Tests.csproj
+          dotnet restore NotificationTest/NotificationTest.csproj
+
+      - name: BookingService – Whitebox + Blackbox tests
+        # Excludes the Integration namespace which requires live infrastructure
+        run: |
+          dotnet test BookingService.Tests/BookingService.Tests.csproj \
+            --filter "FullyQualifiedName!~Integration" \
+            --no-restore \
+            --logger "trx;LogFileName=booking-unit.trx" \
+            --results-directory TestResults
+
+      - name: Flight service – unit tests
+        run: |
+          dotnet test flight/src/AirportSystem.Tests/AirportSystem.Tests.csproj \
+            --no-restore \
+            --logger "trx;LogFileName=flight-unit.trx" \
+            --results-directory TestResults
+
+      - name: Notification service – unit tests
+        run: |
+          dotnet test NotificationTest/NotificationTest.csproj \
+            --no-restore \
+            --logger "trx;LogFileName=notification-unit.trx" \
+            --results-directory TestResults
+
+      - name: PaymentService – npm test
+        working-directory: PaymentService
+        # continue-on-error because no tests are configured yet; remove once tests are added
+        continue-on-error: true
+        run: npm test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: TestResults/*.trx
+
+# ── 3. INTEGRATION TESTS ──────────────────────────────────────────────────────
+  integration-tests:
+    name: Integration Tests
+    needs: unit-tests
+    runs-on: ubuntu-latest
+
+    services:
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        ports:
+          - 5672:5672
+          - 15672:15672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics check_port_connectivity"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      # Port 5435 matches the connection string in BookingService.Tests/appsettings.json
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testdb
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: BookingTestDb
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U testdb -d BookingTestDb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore BookingService.Tests/BookingService.Tests.csproj
+
+      - name: BookingService – integration tests
+        run: |
+          dotnet test BookingService.Tests/BookingService.Tests.csproj \
+            --filter "FullyQualifiedName~Integration" \
+            --no-restore \
+            --logger "trx;LogFileName=booking-integration.trx" \
+            --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: TestResults/*.trx
+
+# ── 4. SYSTEM-LEVEL COOPERATION TEST ──────────────────────────────────────────
+  system-test:
+    name: System Test (booking → queue → Confirmed)
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build BookingService image
+        run: |
+          docker build \
+            --tag booking-service:system-test \
+            --file BookingService/Dockerfile \
+            BookingService/
+
+      - name: Start system test stack
+        run: docker compose -f docker-compose.system-test.yml up -d
+
+      - name: Run system test
+        run: bash scripts/system-test.sh
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.system-test.yml logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.system-test.yml down --volumes
+
+# ── 5. DOCKER BUILD & PUSH ────────────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push [${{ matrix.service }}]
+    needs: system-test
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: flight
+            dockerfile: flight/src/AirportSystem.Flights/Dockerfile
+            context: flight
+          - service: booking
+            dockerfile: BookingService/Dockerfile
+            context: BookingService
+          - service: baggage
+            dockerfile: BaggageAPI/dockerfile
+            context: BaggageAPI
+          - service: gateway
+            dockerfile: gateway/Dockerfile
+            context: gateway
+          - service: payment
+            dockerfile: PaymentService/Dockerfile
+            context: PaymentService
+          - service: notification
+            dockerfile: NotificationService/Dockerfile
+            context: NotificationService
+          - service: assistant
+            dockerfile: AssistantService/Dockerfile
+            context: AssistantService
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase image prefix
+        id: registry
+        run: |
+          echo "prefix=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/airportsystem" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (and push on main)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+          tags: |
+            ${{ steps.registry.outputs.prefix }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ steps.registry.outputs.prefix }}/${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+# ── 6. KUBERNETES MANIFEST VALIDATION ─────────────────────────────────────────
+  k8s-validate:
+    name: Kubernetes Manifest Validation
+    needs: system-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Create stub kubeconfig (--dry-run=client needs no server connection)
+        run: |
+          kubectl config set-cluster ci --server=https://127.0.0.1:6443 --insecure-skip-tls-verify=true
+          kubectl config set-credentials ci-user
+          kubectl config set-context ci --cluster=ci --user=ci-user
+          kubectl config use-context ci
+
+      - name: Validate manifests
+        run: |
+          PASS=0; FAIL=0
+          # Only files that look like k8s manifests (have apiVersion + kind)
+          while IFS= read -r f; do
+            if grep -q "^apiVersion:" "$f" && grep -q "^kind:" "$f"; then
+              if kubectl apply --dry-run=client --validate=false -f "$f" > /dev/null 2>&1; then
+                echo "  OK  $f"
+                PASS=$((PASS+1))
+              else
+                echo " FAIL $f"
+                kubectl apply --dry-run=client --validate=false -f "$f" || true
+                FAIL=$((FAIL+1))
+              fi
+            fi
+          done < <(find k8s -name "*.yaml" | sort)
+
+          echo ""
+          echo "Results: ${PASS} passed, ${FAIL} failed"
+          [ "$FAIL" -eq 0 ]

@@ -5,6 +5,7 @@ using AirportSystem.Flights.Services.Auth;
 using AirportSystem.Flights.Services.Flights;
 using AirportSystem.Flights.Services.Gates;
 using AirportSystem.Flights.Services.Messaging;
+using HotChocolate;
 using HotChocolate.Execution.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -42,9 +43,6 @@ public static class ServiceExtensions
         services.AddScoped<IFlightService, FlightService>();
         services.AddScoped<IGateService, GateService>();
 
-        // Typed HttpClient for Keycloak REST calls
-        services.AddHttpClient<IKeycloakService, KeycloakService>();
-
         return services;
     }
 
@@ -59,6 +57,7 @@ public static class ServiceExtensions
             .AddType<UserType>()
             .AddType<FlightType>()
             .AddType<GateType>()
+            .RegisterDbContext<AppDbContext>(DbContextKind.Synchronized)
             .AddFiltering()
             .AddSorting()
             .AddInMemorySubscriptions()

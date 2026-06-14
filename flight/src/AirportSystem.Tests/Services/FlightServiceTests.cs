@@ -1,7 +1,9 @@
 using AirportSystem.Flights.Models;
 using AirportSystem.Flights.Services.Flights;
+using AirportSystem.Flights.Services.Messaging;
 using AirportSystem.Tests.Helpers;
 using FluentAssertions;
+using Moq;
 
 namespace AirportSystem.Tests.Services;
 
@@ -9,9 +11,10 @@ public class FlightServiceTests
 {
     private static (FlightService service, TestDataBuilder seed, Flights.Data.AppDbContext db) Setup()
     {
-        var db      = DbContextFactory.Create();
-        var seed    = new TestDataBuilder(db);
-        var service = new FlightService(db);
+        var db        = DbContextFactory.Create();
+        var seed      = new TestDataBuilder(db);
+        var publisher = new Mock<IFlightEventPublisher>().Object;
+        var service   = new FlightService(db, publisher);
         return (service, seed, db);
     }
 
@@ -111,63 +114,6 @@ public class FlightServiceTests
             .WithMessage("*Flight*not found*");
     }
 
-    // ── Booking ───────────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task BookFlight_ValidUserAndFlight_CreatesBooking()
-    {
-        var (service, seed, _) = Setup();
-        var user   = seed.SeedUser();
-        var flight = seed.SeedFlight();
-
-        var booking = await service.BookFlightAsync(user.Id, flight.Id, "12A");
-
-        booking.Should().NotBeNull();
-        booking.UserId.Should().Be(user.Id);
-        booking.FlightId.Should().Be(flight.Id);
-        booking.SeatNumber.Should().Be("12A");
-    }
-
-    [Fact]
-    public async Task BookFlight_DuplicateBooking_ThrowsInvalidOperationException()
-    {
-        var (service, seed, _) = Setup();
-        var user   = seed.SeedUser();
-        var flight = seed.SeedFlight();
-
-        await service.BookFlightAsync(user.Id, flight.Id);
-
-        var act = async () => await service.BookFlightAsync(user.Id, flight.Id);
-
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*already booked*");
-    }
-
-    [Fact]
-    public async Task UnbookFlight_ExistingBooking_ReturnsTrue()
-    {
-        var (service, seed, _) = Setup();
-        var user   = seed.SeedUser();
-        var flight = seed.SeedFlight();
-        await service.BookFlightAsync(user.Id, flight.Id);
-
-        var result = await service.UnbookFlightAsync(user.Id, flight.Id);
-
-        result.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task UnbookFlight_NoBookingExists_ReturnsFalse()
-    {
-        var (service, seed, _) = Setup();
-        var user   = seed.SeedUser();
-        var flight = seed.SeedFlight();
-
-        var result = await service.UnbookFlightAsync(user.Id, flight.Id);
-
-        result.Should().BeFalse();
-    }
-
     // ── Follow ────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -242,7 +188,7 @@ public class FlightServiceTests
     }
 
     [Fact]
-    public async Task GetBookedFlightsByUser_ReturnsOnlyUserFlights()
+    public async Task GetFollowedFlightsByUser_ReturnsOnlyUserFlights()
     {
         var (service, seed, _) = Setup();
         var userA  = seed.SeedUser("userA", "a@test.com");
@@ -250,10 +196,10 @@ public class FlightServiceTests
         var flight1 = seed.SeedFlight("SK001");
         var flight2 = seed.SeedFlight("SK002");
 
-        await service.BookFlightAsync(userA.Id, flight1.Id);
-        await service.BookFlightAsync(userB.Id, flight2.Id);
+        await service.FollowFlightAsync(userA.Id, flight1.Id);
+        await service.FollowFlightAsync(userB.Id, flight2.Id);
 
-        var userAFlights = await service.GetBookedFlightsByUserAsync(userA.Id);
+        var userAFlights = await service.GetFollowedFlightsByUserAsync(userA.Id);
 
         userAFlights.Should().HaveCount(1);
         userAFlights[0].FlightNumber.Should().Be("SK001");

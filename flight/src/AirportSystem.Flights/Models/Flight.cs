@@ -22,6 +22,5 @@ public class Flight
     public Gate? Gate { get; set; }
 
     // Navigation
-    // public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public ICollection<FlightFollow> Followers { get; set; } = new List<FlightFollow>();
 }

@@ -9,9 +9,6 @@ public class UserType : ObjectType<User>
     {
         descriptor.Description("An airport system user (Passenger, Staff, or Admin).");
 
-        // Never expose password hash
-        descriptor.Field(u => u.PasswordHash).Ignore();
-
         descriptor
             .Field("followedFlights")
             .Description("All flights the user is currently following.")
@@ -44,9 +41,9 @@ public class FlightType : ObjectType<Flight>
 
 public class FlightResolvers
 {
-    public Gate? GetGate([Parent] Flight flight, AppDbContext db)
+    public async Task<Gate?> GetGate([Parent] Flight flight, AppDbContext db)
         => flight.GateId.HasValue
-            ? db.Gates.Find(flight.GateId.Value)
+            ? await db.Gates.FindAsync(flight.GateId.Value)
             : null;
 }
 

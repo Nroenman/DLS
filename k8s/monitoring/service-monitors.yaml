@@ -1,0 +1,72 @@
+# ServiceMonitor for RabbitMQ built-in Prometheus plugin (port 15692)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rabbitmq
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - airport
+  selector:
+    matchLabels:
+      app: rabbitmq
+  endpoints:
+    - port: prometheus
+      interval: 30s
+      path: /metrics
+---
+# ServiceMonitors for the .NET app services.
+# These require prometheus-net.AspNetCore to be added to each service:
+#   builder.Services.AddOpenTelemetry() or app.UseMetricServer()
+# The /metrics endpoint must be exposed on port 8080 for scraping to work.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: flight
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - airport
+  selector:
+    matchLabels:
+      app: flight
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: booking
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - airport
+  selector:
+    matchLabels:
+      app: booking
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gateway
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - airport
+  selector:
+    matchLabels:
+      app: gateway
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics

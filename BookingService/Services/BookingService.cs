@@ -30,11 +30,7 @@ public class BookingService : IBookingService
 
     public async Task<BookingResponse> CreateBookingAsync(CreateBookingRequest request, string userId)
     {
-        _bookingValidator.ValidatePassengerCount(request.Passengers);
-        _bookingValidator.ValidateLeadPassenger(request.Passengers);
-        _bookingValidator.ValidatePassengerDetails(request.Passengers);
-        _bookingValidator.ValidateFlightInfo(request);
-        _bookingValidator.ValidateBookingDetails(request);
+        _bookingValidator.ValidateCreateBooking(request);
 
         var booking = new Booking
         {
@@ -89,6 +85,16 @@ public class BookingService : IBookingService
             return price;
         });
         await _bookingWriteRepository.AddAsync(booking);
+        
+        var notificationMessage = new NotificationMessage
+        {
+            FromName = "Airport Booking Service",
+            ToEmail = request.ContactEmail,
+            Subject = "Booking Confirmation",
+            Body = $"<h2>Booking Confirmed</h2><p>Your booking with ID {booking.Id} has been created successfully. Total price: {booking.TotalPrice}</p>"
+        };
+
+        await _bookingEventPublisher.PublishNotificationMessage(notificationMessage);
 
         var paymentMessage = new PaymentMessage
         {
@@ -100,19 +106,6 @@ public class BookingService : IBookingService
         };
 
         await _bookingEventPublisher.PublishPaymentMessage(paymentMessage);
-
-        var notificationMessage = new NotificationMessage
-        {
-            FromName = "Airport Booking Service",
-            ToEmail = request.ContactEmail,
-            Subject = "Booking Created",
-            Body =
-                $"<h2>Booking Created</h2>" +
-                $"<p>Your booking with ID {booking.Id} has been created successfully.</p>" +
-                $"<p>Total price: {booking.TotalPrice} DKK</p>"
-        };
-
-        await _bookingEventPublisher.PublishNotificationMessage(notificationMessage);
 
         BookingResponse response = new BookingResponse()
         {

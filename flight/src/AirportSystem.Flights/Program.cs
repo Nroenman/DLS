@@ -1,5 +1,6 @@
 using AirportSystem.Flights.Data;
 using AirportSystem.Flights.Extensions;
+using Prometheus;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +31,7 @@ app.UseWebSockets();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGraphQL();
+app.MapMetrics();
 
 app.Run();
 

@@ -22,14 +22,11 @@
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
 
-    <!-- Keycloak / OIDC Authentication -->
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
-
-    <!-- Password hashing for local auth -->
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-
     <!-- RabbitMQ -->
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
+
+    <!-- Metrics -->
+    <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
   </ItemGroup>
 
 </Project>

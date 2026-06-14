@@ -1,11 +1,12 @@
 ﻿using BaggageAPI.Dtos;
 using BaggageAPI.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-
+using Asp.Versioning;
 namespace BaggageAPI.Controllers;
 
 [ApiController]
-[Route("api/baggage")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/baggage")]
 public class BaggageController(IBaggageService service) : ControllerBase
 {
     [HttpPost("check-in")]

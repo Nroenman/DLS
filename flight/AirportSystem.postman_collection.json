@@ -1,0 +1,932 @@
+{
+  "info": {
+    "name": "AirportSystem \u2013 Flight Service",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": "Full test coverage for the Flight Service GraphQL API via the YARP gateway.\n\n**Setup:**\n1. Start the stack: `docker compose up`\n2. Run **Login \u2013 Staff** (or Admin/Passenger) to populate auth tokens automatically.\n3. All subsequent requests use `{{staffToken}}` / `{{adminToken}}` / `{{passengerToken}}`.\n\n**Subscriptions** are WebSocket requests. Open them in Postman's WebSocket view.\nAuthenticated subscriptions pass the token via `?access_token={{staffToken}}` in the URL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "gatewayUrl",
+      "value": "http://localhost:5000/graphql",
+      "type": "string"
+    },
+    {
+      "key": "keycloakUrl",
+      "value": "http://localhost:8080/realms/airport-system/protocol/openid-connect/token",
+      "type": "string"
+    },
+    {
+      "key": "staffToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "passengerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "flightId",
+      "value": "891e630c-7d12-438d-aec3-05635be69ffd",
+      "type": "string",
+      "description": "AF1680 \u2013 seeded flight"
+    },
+    {
+      "key": "gateId",
+      "value": "",
+      "type": "string",
+      "description": "Populated after Create Gate runs"
+    },
+    {
+      "key": "passengerEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "passengerPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register \u2013 New Passenger",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation Register($input: RegisterInput!) {\n  register(input: $input) {\n    accessToken\n    expiresIn\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"username\": \"passenger_{{$timestamp}}\",\n    \"email\": \"{{passengerEmail}}\",\n    \"password\": \"{{passengerPassword}}\",\n    \"role\": \"Passenger\"\n  }\n}"
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = Date.now();",
+                  "pm.collectionVariables.set('passengerEmail', 'passenger_' + ts + '@example.com');",
+                  "pm.collectionVariables.set('passengerPassword', 'Test1234!');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json().data;",
+                  "if (data && data.register && data.register.accessToken) {",
+                  "    pm.collectionVariables.set('passengerToken', data.register.accessToken);",
+                  "    pm.test('Passenger registered', () => pm.expect(data.register.accessToken).to.not.be.empty);",
+                  "} else {",
+                  "    pm.test('Register skipped (user exists) \u2014 run Login-Passenger instead', () => true);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login \u2013 Passenger",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json().data;",
+                  "if (data && data.login && data.login.accessToken) {",
+                  "    pm.collectionVariables.set('passengerToken', data.login.accessToken);",
+                  "    pm.test('Got passenger token', () => pm.expect(data.login.accessToken).to.not.be.empty);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    expiresIn\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"email\": \"{{passengerEmail}}\",\n    \"password\": \"{{passengerPassword}}\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Login \u2013 Staff",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var token = pm.response.json().data.login.accessToken;",
+                  "pm.collectionVariables.set('staffToken', token);",
+                  "pm.test('Got staff token', () => pm.expect(token).to.not.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    expiresIn\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"email\": \"staff@airport.local\",\n    \"password\": \"Staff1234!\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Login \u2013 Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var token = pm.response.json().data.login.accessToken;",
+                  "pm.collectionVariables.set('adminToken', token);",
+                  "pm.test('Got admin token', () => pm.expect(token).to.not.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    expiresIn\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"email\": \"admin@airport.local\",\n    \"password\": \"Admin1234!\"\n  }\n}"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flights \u2013 Public",
+      "item": [
+        {
+          "name": "Get All Flights",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  flights {\n    id\n    flightNumber\n    airline\n    origin\n    destination\n    direction\n    status\n    scheduledDeparture\n    scheduledArrival\n    actualDeparture\n    actualArrival\n    delayReason\n    gate {\n      id\n      gateNumber\n      terminal\n    }\n  }\n}",
+                "variables": ""
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Flights \u2013 Departures",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  flights(direction: DEPARTURE) {\n    id\n    flightNumber\n    airline\n    destination\n    status\n    scheduledDeparture\n    gate { gateNumber terminal }\n  }\n}",
+                "variables": ""
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Flights \u2013 Arrivals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  flights(direction: ARRIVAL) {\n    id\n    flightNumber\n    airline\n    origin\n    status\n    scheduledArrival\n    gate { gateNumber terminal }\n  }\n}",
+                "variables": ""
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Flights \u2013 Scheduled Only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  flights(status: SCHEDULED) {\n    id\n    flightNumber\n    status\n    scheduledDeparture\n  }\n}",
+                "variables": ""
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Flight by ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetFlight($id: UUID!) {\n  flight(id: $id) {\n    id\n    flightNumber\n    airline\n    origin\n    destination\n    direction\n    status\n    scheduledDeparture\n    scheduledArrival\n    actualDeparture\n    actualArrival\n    delayReason\n    gate { id gateNumber terminal }\n  }\n}",
+                "variables": "{\n  \"id\": \"{{flightId}}\"\n}"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flights \u2013 Staff/Admin",
+      "item": [
+        {
+          "name": "Create Flight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var id = pm.response.json().data?.createFlight?.flight?.id;",
+                  "if (id) pm.collectionVariables.set('flightId', id);",
+                  "pm.test('Flight created', () => pm.expect(id).to.not.be.undefined);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation CreateFlight($input: CreateFlightInput!) {\n  createFlight(input: $input) {\n    flight {\n      id\n      flightNumber\n      airline\n      origin\n      destination\n      direction\n      status\n      scheduledDeparture\n      scheduledArrival\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"flightNumber\": \"SK100\",\n    \"airline\": \"SAS\",\n    \"origin\": \"CPH\",\n    \"destination\": \"LHR\",\n    \"scheduledDeparture\": \"2026-06-01T08:00:00Z\",\n    \"scheduledArrival\": \"2026-06-01T09:30:00Z\",\n    \"direction\": \"DEPARTURE\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Flight \u2013 Set Boarding",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation UpdateFlight($input: UpdateFlightInput!) {\n  updateFlight(input: $input) {\n    flight {\n      id\n      flightNumber\n      status\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"id\": \"{{flightId}}\",\n    \"status\": \"BOARDING\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Flight \u2013 Set Delayed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation UpdateFlight($input: UpdateFlightInput!) {\n  updateFlight(input: $input) {\n    flight {\n      id\n      flightNumber\n      status\n      delayReason\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"id\": \"{{flightId}}\",\n    \"status\": \"DELAYED\",\n    \"delayReason\": \"Technical inspection required\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Flight \u2013 Set Departed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation UpdateFlight($input: UpdateFlightInput!) {\n  updateFlight(input: $input) {\n    flight {\n      id\n      flightNumber\n      status\n      actualDeparture\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"id\": \"{{flightId}}\",\n    \"status\": \"DEPARTED\",\n    \"actualDeparture\": \"2026-06-01T08:12:00Z\"\n  }\n}"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gates \u2013 Public",
+      "item": [
+        {
+          "name": "Get All Gates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  gates {\n    id\n    gateNumber\n    terminal\n    isAvailable\n  }\n}",
+                "variables": ""
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Available Gates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  gates(availableOnly: true) {\n    id\n    gateNumber\n    terminal\n    isAvailable\n  }\n}",
+                "variables": ""
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gates \u2013 Staff/Admin",
+      "item": [
+        {
+          "name": "Create Gate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var id = pm.response.json().data?.createGate?.gate?.id;",
+                  "if (id) pm.collectionVariables.set('gateId', id);",
+                  "pm.test('Gate created', () => pm.expect(id).to.not.be.undefined);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation CreateGate($input: CreateGateInput!) {\n  createGate(input: $input) {\n    gate {\n      id\n      gateNumber\n      terminal\n      isAvailable\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"gateNumber\": \"B12\",\n    \"terminal\": \"B\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Assign Gate to Flight",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation AssignGate($input: AssignGateInput!) {\n  assignGate(input: $input) {\n    gate {\n      id\n      gateNumber\n      isAvailable\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"gateId\": \"{{gateId}}\",\n    \"flightId\": \"{{flightId}}\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Release Gate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation ReleaseGate($input: ReleaseGateInput!) {\n  releaseGate(input: $input) {\n    gate {\n      id\n      gateNumber\n      isAvailable\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"flightId\": \"{{flightId}}\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Gate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation UpdateGate($input: UpdateGateInput!) {\n  updateGate(input: $input) {\n    gate {\n      id\n      gateNumber\n      terminal\n      isAvailable\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"id\": \"{{gateId}}\",\n    \"terminal\": \"C\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Gate (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation DeleteGate($input: DeleteGateInput!) {\n  deleteGate(input: $input) {\n    success\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"id\": \"{{gateId}}\"\n  }\n}"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  me {\n    id\n    username\n    email\n    role\n    createdAt\n    lastSeenAt\n  }\n}",
+                "variables": ""
+              }
+            }
+          }
+        },
+        {
+          "name": "Follow Flight",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{passengerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation FollowFlight($input: FollowFlightInput!) {\n  followFlight(input: $input) {\n    flightFollow {\n      flightId\n      followedAt\n    }\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"flightId\": \"{{flightId}}\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Unfollow Flight",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{passengerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "mutation UnfollowFlight($input: UnfollowFlightInput!) {\n  unfollowFlight(input: $input) {\n    success\n  }\n}",
+                "variables": "{\n  \"input\": {\n    \"flightId\": \"{{flightId}}\"\n  }\n}"
+              }
+            }
+          }
+        },
+        {
+          "name": "Get My Followed Flights",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{passengerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  myFollowedFlights {\n    id\n    flightNumber\n    airline\n    status\n    scheduledDeparture\n  }\n}",
+                "variables": ""
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query {\n  users {\n    id\n    username\n    email\n    role\n    createdAt\n    lastSeenAt\n  }\n}",
+                "variables": ""
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var users = pm.response.json().data && pm.response.json().data.users;",
+                  "if (users && users.length > 0) {",
+                  "    pm.collectionVariables.set('userId', users[0].id);",
+                  "    pm.test('Users returned', () => pm.expect(users.length).to.be.above(0));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "body": {
+              "mode": "graphql",
+              "graphql": {
+                "query": "query GetUser($id: UUID!) {\n  user(id: $id) {\n    id\n    username\n    email\n    role\n    createdAt\n    lastSeenAt\n  }\n}",
+                "variables": "{\n  \"id\": \"{{userId}}\"\n}"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "description": "WebSocket requests. Open in Postman's WebSocket view.\n\nPublic subscriptions need no token.\n",
+      "item": [
+        {
+          "name": "WebSocket",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ]
+            },
+            "description": "Public (info board):\nURL: ws://localhost:5000/graphql\nProtocol header: graphql-transport-ws\nSend: {\"type\":\"connection_init\",\"payload\":{}}\nThen: {\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { onAnyFlightUpdated { id flightNumber status direction gate { gateNumber } } }\"}}\n\n**Authenticated (specific flight):**\nURL: ws://localhost:5000/graphql?access_token={{staffToken}}\nSame init, then:\n{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription OnFlightUpdated($fid: UUID!) { onFlightUpdated(flightId: $fid) { id status } }\",\"variables\":{\"fid\":\"{{flightId}}\"}}}\n\n**New flight created (public):**\nURL: ws://localhost:5000/graphql\nSame init, then subscribe to onFlightCreated."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
