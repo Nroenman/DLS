@@ -47,6 +47,10 @@
               <a class="nav-link active" href="user-bookings.html">My Bookings</a>
             </li>
 
+            <li class="nav-item">
+              <a class="nav-link" href="info-screen.html">Flight Board</a>
+            </li>
+
             <!-- <li class="nav-item dropdown notification-nav">
               <a class="nav-link notification-bell dropdown-toggle" href="#" id="notificationDropdown"
                  role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -137,29 +141,6 @@
       <p id="welcomeText">View and manage your upcoming flight bookings.</p>
     </section>
 
-    <section class="booking-summary-row row">
-      <div class="col-md-6">
-        <div class="summary-card">
-          <h3>3</h3>
-          <p>Active Bookings</p>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="summary-card">
-          <h3>1</h3>
-          <p>Pending Payment</p>
-        </div>
-      </div>
-
-      <!-- <div class="col-md-4">
-        <div class="summary-card">
-          <h3>2</h3>
-          <p>Notifications</p>
-        </div>
-      </div> -->
-    </section>
-
     <section id="bookingsContainer">
       <!-- JS renders bookings here -->
     </section>
@@ -216,256 +197,330 @@
 <script src="../js/bootstrap.min.js"></script>
 
 <script>
-  const keycloakBase = "http://localhost:8080";
   const realm = "airport-system";
-  const API_BASE_URL = "http://localhost:5000";
+
+  const STATUS_MAP = { 0: "Pending", 1: "Confirmed", 2: "Cancelled" };
+
   let allBookings = [];
-let allPayments = [];
+  let allPayments = [];
+  let allFlights  = {};
 
   function getAccessToken() {
     return localStorage.getItem("access_token");
   }
 
   function getUserInfo() {
-    const rawUserInfo = localStorage.getItem("user_info");
-    if (!rawUserInfo) {
-      window.location.href = "login.html";
-      return null;
-    }
-
-    try {
-      return JSON.parse(rawUserInfo);
-    } catch {
-      localStorage.removeItem("user_info");
-      window.location.href = "login.html";
-      return null;
-    }
+    const raw = localStorage.getItem("user_info");
+    if (!raw) { window.location.href = "login.html"; return null; }
+    try { return JSON.parse(raw); }
+    catch { localStorage.removeItem("user_info"); window.location.href = "login.html"; return null; }
   }
 
   function getUserIdFromToken(token) {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.sub;
+    return JSON.parse(atob(token.split(".")[1])).sub;
   }
 
   function renderUserInfo(user) {
-    const displayName =
-      user.name || user.preferred_username || user.given_name || user.email || "User";
-
-    const email = user.email || "No email found";
-
-    document.getElementById("navbarUserName").innerText = displayName;
-    document.getElementById("dropdownUserName").innerText = displayName;
-    document.getElementById("dropdownUserEmail").innerText = email;
-
+    const displayName = user.name || user.preferred_username || user.given_name || user.email || "User";
+    document.getElementById("navbarUserName").innerText  = displayName;
+    document.getElementById("dropdownUserName").innerText  = displayName;
+    document.getElementById("dropdownUserEmail").innerText = user.email || "";
     document.getElementById("welcomeText").innerText =
       `Welcome ${displayName}. View and manage your upcoming flight bookings.`;
   }
 
   async function fetchJson(url, token) {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    if (!response.ok) {
-      console.error(`Failed request: ${url}`);
-      console.error(await response.text());
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+      });
+      if (!res.ok) { console.error(`${url} → ${res.status}`); return []; }
+      return await res.json();
+    } catch (e) {
+      console.error(`${url} failed:`, e);
       return [];
     }
+  }
 
-    return await response.json();
+  async function fetchFlightsMap(token) {
+    try {
+      const res = await fetch("/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ query: `query { flights { id flightNumber airline origin destination scheduledDeparture scheduledArrival } }` })
+      });
+      const data = await res.json();
+      const flights = data.data?.flights || [];
+      return Object.fromEntries(flights.map(f => [f.id, f]));
+    } catch (e) {
+      console.error("GraphQL failed:", e);
+      return {};
+    }
   }
 
   async function loadDashboardData() {
     const token = getAccessToken();
-
-    if (!token) {
-      window.location.href = "login.html";
-      return;
-    }
+    if (!token) { window.location.href = "login.html"; return; }
 
     const userId = getUserIdFromToken(token);
 
-    const bookings = await fetchJson(
-      `${API_BASE_URL}/api/Booking/user/${userId}`,
-      token
-    );
+    // All three fetches start in parallel.
+    // Render booking cards as soon as bookings + flights arrive without
+    // waiting for payments, which can be slow (MySQL cold-connection etc).
+    const paymentsPromise = fetchJson(`/api/payment/user/${userId}`, token);
 
-    const payments = await fetchJson(
-      `${API_BASE_URL}/api/payment/user/${userId}`,
-      token
-    );
+    const [bookings, flightsMap] = await Promise.all([
+      fetchJson(`/api/Booking/user/${userId}`, token),
+      fetchFlightsMap(token)
+    ]);
 
-    renderSummary(bookings, payments);
     allBookings = bookings;
-allPayments = payments;
-    renderBookings(bookings, payments);
-  }
+    allFlights  = flightsMap;
+    renderBookings(bookings, [], flightsMap);
 
-  function renderSummary(bookings, payments) {
-    const summaryNumbers = document.querySelectorAll(".summary-card h3");
-
-    const activeBookings = bookings.length;
-
-    const pendingPayments = payments.filter(p =>
-      String(p.status).toUpperCase() === "PENDING"
-    ).length;
-
-    // const notifications = 0;
-
-    summaryNumbers[0].innerText = activeBookings;
-    summaryNumbers[1].innerText = pendingPayments;
-    // summaryNumbers[2].innerText = notifications;
-
-    // const notificationCount = document.querySelector(".notification-count");
-    // if (notificationCount) {
-    //   notificationCount.innerText = notifications;
-    //   notificationCount.style.display = notifications > 0 ? "inline-block" : "none";
-    // }
-  }
-
-  function getPaymentForBooking(booking, payments) {
-    const bookingId = booking.id || booking.bookingId;
-
-    return payments.find(p =>
-      String(p.booking_id) === String(bookingId)
-    );
-  }
-
-  function renderBookings(bookings, payments) {
-    const container = document.getElementById("bookingsContainer");
-    container.innerHTML = "";
-
-    if (!bookings.length) {
-      container.innerHTML = `
-        <div class="summary-card">
-          <p>No bookings found.</p>
-        </div>
-      `;
-      return;
-    }
-
-    bookings.forEach(booking => {
-      const payment = getPaymentForBooking(booking, payments);
-
-      const bookingStatus = String(booking.status || "Pending");
-      const paymentStatus = String(payment?.status || "NO PAYMENT");
-
-      const statusClass =
-        bookingStatus.toLowerCase() === "confirmed"
-          ? "status-confirmed"
-          : "status-pending";
-
-      const passengers = booking.passengers?.length || 0;
-      const bookingId = booking.id || booking.bookingId || "N/A";
-    const rawPrice = booking.ticketPrice || payment?.amount || 0;
-const price = Number(rawPrice) / 100;
-
-      container.innerHTML += `
-        <div class="user-booking-card">
-
-          <div class="booking-logo-box">
-            <img src="../img/cph.png" alt="Flight logo">
-          </div>
-
-          <div class="booking-info-box">
-
-            <span class="booking-status ${statusClass}">
-              ${bookingStatus}
-            </span>
-
-            <h3>Flight ${booking.flightId}</h3>
-
-            <p><strong>Booking ID:</strong> ${bookingId}</p>
-            <p><strong>Passengers:</strong> ${passengers}</p>
-            <p><strong>Email:</strong> ${booking.contactEmail || "N/A"}</p>
-            <p><strong>Phone:</strong> ${booking.contactPhone || "N/A"}</p>
-            <p><strong>Payment:</strong> ${paymentStatus}</p>
-
-          </div>
-
-          <div class="booking-action-box">
-
-            <div class="booking-price">
-              ${price.toLocaleString("da-DK", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-})} DKK
-            </div>
-
-            <button class="booking-btn" onclick="viewBooking('${bookingId}')">
-              View Booking
-            </button>
-
-          </div>
-
-        </div>
-      `;
+    // Update price/payment-status columns once payment data arrives.
+    paymentsPromise.then(payments => {
+      allPayments = payments;
+      renderBookings(bookings, payments, flightsMap);
     });
   }
 
-function viewBooking(id) {
-  const booking = allBookings.find(b =>
-    String(b.id || b.bookingId) === String(id)
-  );
-
-  if (!booking) {
-    return;
+  function getPaymentForBooking(booking, payments) {
+    const id = String(booking.bookingId);
+    return payments.find(p => String(p.booking_id) === id);
   }
 
-  const payment = getPaymentForBooking(booking, allPayments);
+  function formatStatus(rawStatus) {
+    return STATUS_MAP[rawStatus] ?? String(rawStatus);
+  }
 
-  const passengers = booking.passengers?.length || 0;
-  const paymentStatus = payment?.status || "NO PAYMENT";
-const rawPrice = booking.ticketPrice || payment?.amount || 0;
-const price = Number(rawPrice) / 100;
+  function formatPrice(booking, payment) {
+    // payment.amount is stored in øre (cents) by Stripe; totalPrice is in DKK
+    if (payment?.amount) return (Number(payment.amount) / 100).toLocaleString("da-DK", { minimumFractionDigits: 2 }) + " DKK";
+    return Number(booking.totalPrice || 0).toLocaleString("da-DK", { minimumFractionDigits: 2 }) + " DKK";
+  }
 
-  document.getElementById("bookingModalBody").innerHTML = `
-    <p><strong>Booking ID:</strong> ${booking.id || booking.bookingId || "N/A"}</p>
-    <p><strong>Flight ID:</strong> ${booking.flightId || "N/A"}</p>
-    <p><strong>Status:</strong> ${booking.status || "Pending"}</p>
-    <p><strong>Passengers:</strong> ${passengers}</p>
-    <p><strong>Email:</strong> ${booking.contactEmail || "N/A"}</p>
-    <p><strong>Phone:</strong> ${booking.contactPhone || "N/A"}</p>
-    <p><strong>Payment:</strong> ${paymentStatus}</p>
-    <p><strong>Price:</strong> ${price.toLocaleString("da-DK", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-})} DKK</p>
-  `;
+  function flightLabel(booking, flightsMap) {
+    const f = flightsMap[booking.flightId];
+    if (!f) return `Flight ${booking.flightId}`;
+    return `${f.flightNumber} · ${f.origin} → ${f.destination}`;
+  }
 
-  $("#bookingModal").modal("show");
-}
+  function renderBookings(bookings, payments, flightsMap) {
+    const container = document.getElementById("bookingsContainer");
+
+    if (!bookings.length) {
+      container.innerHTML = `<div class="summary-card"><p>No bookings found.</p></div>`;
+      return;
+    }
+
+    container.innerHTML = bookings.map(booking => {
+      const payment       = getPaymentForBooking(booking, payments);
+      const statusLabel   = formatStatus(booking.status);
+      const statusClass   = statusLabel.toLowerCase() === "confirmed" ? "status-confirmed" : "status-pending";
+      const bookingId     = booking.bookingId || "N/A";
+      const paymentStatus = payment?.status || "No payment";
+      const flight        = flightsMap[booking.flightId];
+
+      return `
+        <div class="user-booking-card">
+          <div class="booking-logo-box">
+            <img src="../img/cph.png" alt="Flight logo">
+          </div>
+          <div class="booking-info-box">
+            <span class="booking-status ${statusClass}">${statusLabel}</span>
+            <h3>${flightLabel(booking, flightsMap)}</h3>
+            ${flight ? `<p>${new Date(flight.scheduledDeparture).toLocaleString("da-DK")} → ${new Date(flight.scheduledArrival).toLocaleString("da-DK")}</p>` : ""}
+            <p><strong>Booking ID:</strong> ${bookingId}</p>
+            <p><strong>Passengers:</strong> ${booking.passengers?.length || 0}</p>
+            <p><strong>Payment:</strong> ${paymentStatus}</p>
+          </div>
+          <div class="booking-action-box">
+            <div class="booking-price">${formatPrice(booking, payment)}</div>
+            <button class="booking-btn" onclick="viewBooking('${bookingId}')">View Details</button>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  async function viewBooking(id) {
+    const booking = allBookings.find(b => String(b.bookingId) === String(id));
+    if (!booking) return;
+
+    const payment = getPaymentForBooking(booking, allPayments);
+    const flight  = allFlights[booking.flightId];
+
+    document.getElementById("bookingModalBody").innerHTML = `
+      <p><strong>Booking ID:</strong> ${booking.bookingId}</p>
+      <p><strong>Status:</strong> ${formatStatus(booking.status)}</p>
+      <p><strong>Flight:</strong> ${flightLabel(booking, allFlights)}</p>
+      ${flight ? `
+        <p><strong>Departure:</strong> ${new Date(flight.scheduledDeparture).toLocaleString("da-DK")}</p>
+        <p><strong>Arrival:</strong> ${new Date(flight.scheduledArrival).toLocaleString("da-DK")}</p>
+      ` : ""}
+      <p><strong>Contact email:</strong> ${booking.contactEmail || "N/A"}</p>
+      <p><strong>Contact phone:</strong> ${booking.contactPhone || "N/A"}</p>
+      <p><strong>Payment status:</strong> ${payment?.status || "No payment"}</p>
+      <p><strong>Price:</strong> ${formatPrice(booking, payment)}</p>
+      ${payment?.status !== "COMPLETED" ? `
+      <button class="btn btn-success btn-block mt-2"
+              onclick="payForBooking('${booking.bookingId}')">
+        Pay Now
+      </button>` : ""}
+      <hr>
+      <h6><strong>Baggage</strong></h6>
+      <div id="baggageSection"><em>Loading...</em></div>`;
+
+    $("#bookingModal").modal("show");
+    await renderBaggageSection(booking);
+  }
+
+  async function renderBaggageSection(booking) {
+    const token      = getAccessToken();
+    const passengers = booking.passengers || [];
+
+    if (!passengers.length) {
+      document.getElementById("baggageSection").innerHTML = "<p class='text-muted'>No passengers on this booking.</p>";
+      return;
+    }
+
+    const baggageResults = await Promise.all(
+      passengers.map(p => fetchJson(`/api/v1/baggage/passenger/${p.id}`, token))
+    );
+
+    const bookingId = booking.bookingId;
+
+    document.getElementById("baggageSection").innerHTML = passengers.map((p, i) => {
+      const items    = baggageResults[i] || [];
+      const name     = `${p.firstName} ${p.lastName}`;
+      const itemsHtml = items.length
+        ? items.map(b => `
+            <div class="d-flex justify-content-between align-items-center small mb-1">
+              <span>${b.weight} kg</span>
+              <span class="badge badge-secondary">${b.status}</span>
+              <span class="text-muted">${b.currentLocation}</span>
+            </div>`).join("")
+        : `<p class="small text-muted mb-1">No baggage checked in.</p>`;
+
+      return `
+        <div class="mb-3 pb-2 border-bottom">
+          <strong>${name}</strong>${p.isLeadPassenger ? ' <small class="text-muted">(lead)</small>' : ''}
+          ${itemsHtml}
+          <div class="input-group input-group-sm mt-2">
+            <input type="number" class="form-control" id="bagWeight_${p.id}"
+                   placeholder="Weight (kg)" min="0.1" step="0.1">
+            <div class="input-group-append">
+              <button class="btn btn-sm btn-outline-secondary"
+                      onclick="checkInBaggage('${bookingId}', '${p.id}')">
+                Check In
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  async function checkInBaggage(bookingId, passengerId) {
+    const input  = document.getElementById(`bagWeight_${passengerId}`);
+    const weight = parseFloat(input?.value);
+    if (!weight || weight <= 0) { alert("Enter a valid weight in kg."); return; }
+
+    const token = getAccessToken();
+    try {
+      const res = await fetch("/api/v1/baggage/check-in", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ bookingId, passengerId, weight })
+      });
+
+      if (!res.ok) { alert("Check-in failed: " + await res.text()); return; }
+      input.value = "";
+      const booking = allBookings.find(b => String(b.bookingId) === String(bookingId));
+      if (booking) await renderBaggageSection(booking);
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  }
+
+  async function payForBooking(bookingId) {
+    const booking = allBookings.find(b => String(b.bookingId) === String(bookingId));
+    if (!booking) return;
+
+    const token  = getAccessToken();
+    const userId = getUserIdFromToken(token);
+
+    let idempotencyKey = localStorage.getItem(`idempotencyKey-${bookingId}`);
+    if (!idempotencyKey) {
+      idempotencyKey = `checkout-${bookingId}-${Date.now()}`;
+      localStorage.setItem(`idempotencyKey-${bookingId}`, idempotencyKey);
+    }
+
+    try {
+      const res = await fetch("/api/payment/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey
+        },
+        body: JSON.stringify({
+          BookingId: bookingId,
+          UserId: userId,
+          TotalPrice: booking.totalPrice,
+          ContactEmail: booking.contactEmail,
+          ContactPhone: booking.contactPhone
+        })
+      });
+
+      if (!res.ok) { alert("Payment failed: " + await res.text()); return; }
+      const data = await res.json();
+      if (!data.url) { alert("Stripe checkout URL missing."); return; }
+      window.location.href = data.url;
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  }
+
+  function showPaymentBanner() {
+    const param = new URLSearchParams(window.location.search).get("payment");
+    if (!param) return;
+    const isSuccess = param === "success";
+    const banner = document.createElement("div");
+    banner.className = `alert alert-${isSuccess ? "success" : "warning"} alert-dismissible fade show mx-3 mt-3`;
+    banner.role = "alert";
+    banner.innerHTML = isSuccess
+      ? "Payment completed successfully!"
+      : "Payment was cancelled. You can try again from your booking details.";
+    banner.innerHTML += `<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>`;
+    document.querySelector("main").prepend(banner);
+    history.replaceState(null, "", window.location.pathname);
+  }
 
   function logout() {
     const idToken = localStorage.getItem("id_token");
-
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("id_token");
     localStorage.removeItem("user_info");
 
-    const redirectUri = "http://localhost:5500/index.html";
-
-    const logoutUrl =
-      `${keycloakBase}/realms/${realm}/protocol/openid-connect/logout?` +
-      new URLSearchParams({
-        id_token_hint: idToken,
-        post_logout_redirect_uri: redirectUri
-      }).toString();
-
-    window.location.href = logoutUrl;
+    if (idToken) {
+      window.location.href =
+        `/realms/${realm}/protocol/openid-connect/logout` +
+        `?id_token_hint=${idToken}&post_logout_redirect_uri=${encodeURIComponent(window.location.origin + "/")}`;
+    } else {
+      window.location.href = "/";
+    }
   }
 
   const user = getUserInfo();
-
   if (user) {
     renderUserInfo(user);
     loadDashboardData();
   }
+
+  showPaymentBanner();
 
   document.getElementById("logoutBtn").addEventListener("click", logout);
   document.querySelector(".tm-current-year").innerText = new Date().getFullYear();
