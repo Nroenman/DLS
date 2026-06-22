@@ -6,10 +6,11 @@ metadata:
 data:
   ASPNETCORE_ENVIRONMENT: Development
   Keycloak__BaseUrl: "http://keycloak:8080"
+  Keycloak__AuthServerUrl: "http://keycloak:8080"
   Keycloak__Realm: airport-system
   Keycloak__ClientId: airport-api
   Keycloak__FrontendClientId: airport-frontend
-  KEYCLOAK_EXTERNAL_URL: "http://localhost:30880"
+  KEYCLOAK_EXTERNAL_URL: "http://localhost:18080"
   RabbitMQ__Host: rabbitmq
   RabbitMQ__Port: "5672"
   Mail__FromEmail: noreply@airport.dk
