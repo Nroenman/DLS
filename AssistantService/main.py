@@ -9,6 +9,9 @@ from pydantic import BaseModel
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 FLIGHT_GRAPHQL_URL = os.getenv("FLIGHT_GRAPHQL_URL", "http://flight:8080/graphql")
+# Chat inference can be slow on CPU-only Ollama, so make the request timeout
+# configurable. Defaults high enough for a 3B model generating on CPU.
+OLLAMA_CHAT_TIMEOUT = float(os.getenv("OLLAMA_CHAT_TIMEOUT", "300"))
 
 FLIGHTS_QUERY = """
 {
@@ -163,7 +166,7 @@ async def chat(req: ChatRequest):
 
     system = SYSTEM_PROMPT.format(flight_data=flight_data)
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=OLLAMA_CHAT_TIMEOUT) as client:
         resp = await client.post(
             f"{OLLAMA_URL}/api/chat",
             json={

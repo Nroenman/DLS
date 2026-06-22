@@ -31,13 +31,15 @@ spec:
   maxReplicaCount: 5
   # Wait 60s before scaling down to avoid thrashing on bursty queues
   cooldownPeriod: 60
+  # Poll the queue every 15s so scaling reacts quickly (default is 30s)
+  pollingInterval: 15
   triggers:
     - type: rabbitmq
       authenticationRef:
         name: rabbitmq-trigger-auth
       metadata:
         protocol: amqp
-        # Update queueName to match the queue your NotificationService consumes from
-        queueName: notification-queue
+        # Must match the queue NotificationService consumes from (RabbitMQ.cs)
+        queueName: Notification
         mode: QueueLength
         value: "5"
