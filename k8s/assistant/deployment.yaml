@@ -36,6 +36,8 @@ spec:
               value: "http://ollama:11434"
             - name: OLLAMA_MODEL
               value: "qwen2.5:3b"
+            - name: OLLAMA_CHAT_TIMEOUT
+              value: "300"
             - name: FLIGHT_GRAPHQL_URL
               value: "http://flight:8080/graphql"
           resources:

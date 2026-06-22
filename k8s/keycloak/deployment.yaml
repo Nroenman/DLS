@@ -33,6 +33,18 @@ spec:
               value: postgres
             - name: KC_DB_URL
               value: jdbc:postgresql://keycloak-postgres:5432/keycloak_db
+            # Browser reaches Keycloak through the UI's nginx proxy at
+            # localhost:5500, so frontend URLs (auth endpoint, IdP broker
+            # redirect, issuer) must use that origin. Backchannel stays dynamic
+            # so in-cluster services keep fetching JWKS via keycloak:8080.
+            - name: KC_HOSTNAME_URL
+              value: "http://localhost:5500"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+              value: "true"
+            - name: KC_PROXY
+              value: "edge"
           envFrom:
             - secretRef:
                 name: keycloak-credentials

@@ -32,12 +32,27 @@ echo "==> Enabling metrics-server..."
 minikube addons enable metrics-server
 
 # ── 4. Install KEDA (queue-based autoscaling for notification service) ───────
-echo "==> Installing KEDA..."
-helm repo add kedacore https://kedacore.github.io/charts
+# KEDA only powers the notification service's queue-based autoscaling; the rest
+# of the stack runs fine without it. So a slow/failed KEDA install warns and
+# continues instead of aborting the whole deploy (common on resource-starved or
+# proxied Windows/Docker-Desktop clusters). Override the wait with KEDA_TIMEOUT.
+KEDA_TIMEOUT="${KEDA_TIMEOUT:-8m}"
+echo "==> Installing KEDA (timeout ${KEDA_TIMEOUT})..."
+helm repo add kedacore https://kedacore.github.io/charts --force-update
 helm repo update kedacore
-helm upgrade --install keda kedacore/keda \
+if helm upgrade --install keda kedacore/keda \
   --namespace keda --create-namespace \
-  --wait --timeout 3m
+  --wait --timeout "${KEDA_TIMEOUT}" --debug; then
+  echo "==> KEDA installed."
+else
+  echo "WARNING: KEDA install did not complete within ${KEDA_TIMEOUT}." >&2
+  echo "         The stack will still deploy, but the notification service's" >&2
+  echo "         queue-based autoscaling (ScaledObject) won't work until KEDA" >&2
+  echo "         is healthy. Diagnose with:" >&2
+  echo "           kubectl get pods -n keda" >&2
+  echo "           kubectl get events -n keda --sort-by=.lastTimestamp | tail -20" >&2
+  echo "         Re-run this script (or just the helm command) once resolved." >&2
+fi
 
 # ── 5. Create namespaces ─────────────────────────────────────────────────────
 echo "==> Creating namespaces..."
